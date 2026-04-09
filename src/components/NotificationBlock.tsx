@@ -60,7 +60,7 @@ const NotificationBlock = ({ extinguishers }: NotificationBlockProps) => {
               }`}
             >
               <span>
-                Ext. {item.ext.code} (Ponto {item.ext.port || '-'}) - {item.type}
+                Ext. {item.ext.code} (Posto {item.ext.port || '-'}) {item.type}
               </span>
               <span className="font-bold">{item.days} dias</span>
             </div>

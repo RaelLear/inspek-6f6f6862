@@ -7,7 +7,6 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
-import MainMenu from "./pages/MainMenu";
 import EmergencyContacts from "./pages/EmergencyContacts";
 import SalesPage from "./pages/SalesPage";
 import AdminPage from "./pages/AdminPage";
@@ -29,11 +28,8 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      {/* Menu principal - protegido */}
-      <Route path="/" element={<ProtectedRoute><MainMenu /></ProtectedRoute>} />
-      
-      {/* Dashboard de extintores */}
-      <Route path="/extintores" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      {/* Dashboard de extintores - página inicial */}
+      <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       
       {/* Contatos de emergência */}
       <Route path="/contatos-emergencia" element={<ProtectedRoute><EmergencyContacts /></ProtectedRoute>} />
@@ -47,7 +43,8 @@ const AppRoutes = () => {
       {/* Outras rotas */}
       <Route path="/print" element={<ProtectedRoute><PrintPage /></ProtectedRoute>} />
       <Route path="/admin" element={<AdminPage />} />
-      <Route path="/dashboard" element={<Navigate to="/extintores" replace />} />
+      <Route path="/extintores" element={<Navigate to="/" replace />} />
+      <Route path="/dashboard" element={<Navigate to="/" replace />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

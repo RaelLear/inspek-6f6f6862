@@ -74,14 +74,19 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete }: Ins
   };
 
   const handleBack = () => {
-    if (step === 'port') setStep('code');
-    else if (step === 'conformity') setStep('port');
+    if (step === 'port') { setStep('code'); setIsObstructed(false); }
+    else if (step === 'conformity') { setStep('port'); setIsReserve(false); }
     else if (step === 'dates') setStep('conformity');
   };
 
   const handleCodeConfirm = () => {
     if (!code) return;
-    setStep('port');
+    // If reserve, skip to conformity with only dates
+    if (isReserve) {
+      setStep('port');
+    } else {
+      setStep('port');
+    }
   };
 
   const handlePortConfirm = () => {
@@ -97,20 +102,26 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete }: Ins
         if (parts.length === 3) setThirdLevel(parts[2]);
       }
     }
-    setStep('conformity');
-  };
-
-  const handleConformityNext = () => {
-    if (!isObstructed && !isReserve && (!conformity.manometer || !conformity.seal || !conformity.plate || !conformity.floorPaint)) {
-      toast.error('Preencha todos os campos de conformidade.');
-      return;
-    }
+    // If obstructed, skip conformity and go straight to submit
     if (isObstructed) {
       handleSubmitSpecialStatus('Obstruído');
       return;
     }
+    setStep('conformity');
+  };
+
+  const handleConformityNext = () => {
     if (isReserve) {
-      handleSubmitSpecialStatus('Reserva');
+      // Reserve only needs conformity filled, then go to dates
+      if (!conformity.manometer || !conformity.seal || !conformity.plate || !conformity.floorPaint) {
+        toast.error('Preencha todos os campos de conformidade.');
+        return;
+      }
+      setStep('dates');
+      return;
+    }
+    if (!conformity.manometer || !conformity.seal || !conformity.plate || !conformity.floorPaint) {
+      toast.error('Preencha todos os campos de conformidade.');
       return;
     }
     setStep('dates');
@@ -185,7 +196,7 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete }: Ins
       const formattedSealReview = sealReviewDate ? formatDisplay(sealReviewDate) : null;
 
       const isInReview = conformity.manometer === 'Não Conforme' || conformity.seal === 'Não Conforme';
-      const newStatus = isInReview ? 'Em Revisão' : 'Aprovado';
+      const newStatus = isReserve ? 'Reserva' : isInReview ? 'Em Revisão' : 'Aprovado';
       const reviewSendDate = isInReview ? formattedDate : null;
 
       // Handle port conflicts: remove extinguisher from old port
@@ -208,7 +219,7 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete }: Ins
       } else {
         const updateData: any = {
           port: isInReview ? '' : port,
-          status: isInReview ? 'Em Revisão' : 'Aprovado',
+          status: newStatus,
           warranty_expiry: warrantyFormatted,
           third_level: thirdFormatted,
           review_send_date: isInReview ? reviewSendDate : existing.review_send_date,
@@ -263,7 +274,6 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete }: Ins
           variant={value === 'Conforme' ? 'default' : 'outline'}
           className={`flex-1 h-11 gap-1 font-bold ${value === 'Conforme' ? 'bg-status-approved text-white hover:bg-status-approved/90' : ''}`}
           onClick={() => onChange('Conforme')}
-          disabled={isObstructed || isReserve}
         >
           <Check className="h-4 w-4" /> Conforme
         </Button>
@@ -272,7 +282,6 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete }: Ins
           variant={value === 'Não Conforme' ? 'default' : 'outline'}
           className={`flex-1 h-11 gap-1 font-bold ${value === 'Não Conforme' ? 'bg-status-urgent text-white hover:bg-status-urgent/90' : ''}`}
           onClick={() => onChange('Não Conforme')}
-          disabled={isObstructed || isReserve}
         >
           <X className="h-4 w-4" /> Não Conforme
         </Button>
@@ -327,63 +336,57 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete }: Ins
                 </Button>
               )}
               <DialogTitle className="text-xl font-black flex-1">
-                {step === 'code' ? 'Código do Extintor' : step === 'port' ? 'Ponto' : step === 'conformity' ? 'Conformidade' : 'Datas'}
+                {step === 'code' ? 'Código do Extintor' : step === 'port' ? 'Posto' : step === 'conformity' ? 'Conformidade' : 'Datas'}
               </DialogTitle>
-              {step === 'conformity' && !dateEditField && (
-                <div className="flex gap-1">
-                  <Button
-                    variant={isObstructed ? 'default' : 'outline'}
-                    size="sm"
-                    className={`gap-1 text-xs ${isObstructed ? 'bg-status-urgent text-white hover:bg-status-urgent/90' : 'border-status-urgent text-status-urgent hover:bg-status-urgent/10'}`}
-                    onClick={() => {
-                      setIsObstructed(!isObstructed);
-                      setIsReserve(false);
-                      if (!isObstructed) {
-                        setConformity({ manometer: null, seal: null, plate: null, floorPaint: null });
-                      }
-                    }}
-                  >
-                    <Ban className="h-3 w-3" /> Obstruído
-                  </Button>
-                  <Button
-                    variant={isReserve ? 'default' : 'outline'}
-                    size="sm"
-                    className={`gap-1 text-xs ${isReserve ? 'bg-status-review text-white hover:bg-status-review/90' : 'border-status-review text-status-review hover:bg-status-review/10'}`}
-                    onClick={() => {
-                      setIsReserve(!isReserve);
-                      setIsObstructed(false);
-                      if (!isReserve) {
-                        setConformity({ manometer: null, seal: null, plate: null, floorPaint: null });
-                      }
-                    }}
-                  >
-                    <RefreshCw className="h-3 w-3" /> Reserva
-                  </Button>
-                </div>
-              )}
             </div>
           </DialogHeader>
 
           {step === 'code' && (
-            <Numpad value={code} onChange={setCode} onConfirm={handleCodeConfirm} maxDigits={3} label="Digite o código (3 dígitos)" />
+            <div className="space-y-4">
+              {/* Reserva button at top center */}
+              <div className="flex justify-center">
+                <Button
+                  variant={isReserve ? 'default' : 'outline'}
+                  size="sm"
+                  className={`gap-1 text-xs ${isReserve ? 'bg-status-review text-white hover:bg-status-review/90' : 'border-status-review text-status-review hover:bg-status-review/10'}`}
+                  onClick={() => setIsReserve(!isReserve)}
+                >
+                  <RefreshCw className="h-3 w-3" /> Reserva
+                </Button>
+              </div>
+              <Numpad value={code} onChange={setCode} onConfirm={handleCodeConfirm} maxDigits={3} label="Digite o código (3 dígitos)" />
+            </div>
           )}
 
           {step === 'port' && (
-            <Numpad value={port} onChange={setPort} onConfirm={handlePortConfirm} maxDigits={2} label="Digite o ponto (2 dígitos)" />
+            <div className="space-y-4">
+              {/* Obstruído button at top center */}
+              <div className="flex justify-center">
+                <Button
+                  variant={isObstructed ? 'default' : 'outline'}
+                  size="sm"
+                  className={`gap-1 text-xs ${isObstructed ? 'bg-status-urgent text-white hover:bg-status-urgent/90' : 'border-status-urgent text-status-urgent hover:bg-status-urgent/10'}`}
+                  onClick={() => setIsObstructed(!isObstructed)}
+                >
+                  <Ban className="h-3 w-3" /> Obstruído
+                </Button>
+              </div>
+              <Numpad value={port} onChange={setPort} onConfirm={handlePortConfirm} maxDigits={2} label="Digite o posto (2 dígitos)" />
+            </div>
           )}
 
           {step === 'conformity' && !dateEditField && (
             <div className="space-y-4">
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Extintor: {code} | Ponto: {port}</p>
+                <p className="text-xs text-muted-foreground">Extintor: {code} | Posto: {port}</p>
               </div>
 
-              {(isObstructed || isReserve) && (
-                <div className={`rounded-lg border p-3 ${isObstructed ? 'border-status-urgent/30 bg-status-urgent/5' : 'border-status-review/30 bg-status-review/5'}`}>
-                  <p className={`text-sm font-bold ${isObstructed ? 'text-status-urgent' : 'text-status-review'}`}>
-                    ⚠ Extintor marcado como {isObstructed ? 'obstruído' : 'reserva'}
+              {isReserve && (
+                <div className="rounded-lg border p-3 border-status-review/30 bg-status-review/5">
+                  <p className="text-sm font-bold text-status-review">
+                    Extintor marcado como reserva
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">Não é necessário preencher conformidade nem datas.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Preencha a conformidade e as datas de vencimento.</p>
                 </div>
               )}
 
@@ -399,7 +402,7 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete }: Ins
                   }
                 }}
               />
-              {conformity.manometer === 'Não Conforme' && !isObstructed && (
+              {conformity.manometer === 'Não Conforme' && (
                 <div className="cursor-pointer rounded-lg border border-status-urgent/30 p-3 hover:bg-muted/50" onClick={() => { setDateEditField('manometerReview'); setDateEditValue(manometerReviewDate); }}>
                   <p className="text-xs text-status-urgent">Data de envio para revisão (Manômetro)</p>
                   <p className="text-lg font-bold">{manometerReviewDate ? formatDisplay(manometerReviewDate) : 'Toque para editar'}</p>
@@ -418,7 +421,7 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete }: Ins
                   }
                 }}
               />
-              {conformity.seal === 'Não Conforme' && !isObstructed && (
+              {conformity.seal === 'Não Conforme' && (
                 <div className="cursor-pointer rounded-lg border border-status-urgent/30 p-3 hover:bg-muted/50" onClick={() => { setDateEditField('sealReview'); setDateEditValue(sealReviewDate); }}>
                   <p className="text-xs text-status-urgent">Data de envio para revisão (Lacre)</p>
                   <p className="text-lg font-bold">{sealReviewDate ? formatDisplay(sealReviewDate) : 'Toque para editar'}</p>
@@ -430,7 +433,7 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete }: Ins
                 value={conformity.plate}
                 onChange={(v) => setConformity({ ...conformity, plate: v })}
               />
-              {conformity.plate === 'Não Conforme' && !isObstructed && (
+              {conformity.plate === 'Não Conforme' && (
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-muted-foreground">Descrição (opcional)</p>
                   <textarea
@@ -448,7 +451,7 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete }: Ins
                 value={conformity.floorPaint}
                 onChange={(v) => setConformity({ ...conformity, floorPaint: v })}
               />
-              {conformity.floorPaint === 'Não Conforme' && !isObstructed && (
+              {conformity.floorPaint === 'Não Conforme' && (
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-muted-foreground">Descrição (opcional)</p>
                   <textarea
@@ -462,7 +465,7 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete }: Ins
               )}
 
               <Button className="w-full h-12 text-lg font-bold" onClick={handleConformityNext} disabled={submitting}>
-                {isObstructed ? (submitting ? 'Salvando...' : 'Registrar como Obstruído') : isReserve ? (submitting ? 'Salvando...' : 'Registrar como Reserva') : 'Próximo →'}
+                Próximo
               </Button>
             </div>
           )}
@@ -486,7 +489,7 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete }: Ins
           {step === 'dates' && !dateEditField && (
             <div className="space-y-4">
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Extintor: {code} | Ponto: {port}</p>
+                <p className="text-xs text-muted-foreground">Extintor: {code} | Posto: {port}</p>
               </div>
 
               <div className="cursor-pointer rounded-lg p-3 bg-foreground text-background hover:bg-foreground/90" onClick={() => { setDateEditField('inspection'); setDateEditValue(inspectionDate); }}>

@@ -33,6 +33,7 @@ const SpreadsheetDialog = ({ open, onOpenChange, inspections, onRefresh }: Props
   const [warrantyYearFilter, setWarrantyYearFilter] = useState<string>('all');
   const [thirdLevelYearFilter, setThirdLevelYearFilter] = useState<string>('all');
   const [ports, setPorts] = useState<{ id: string; number: string; description: string | null }[]>([]);
+  const [showPrintPopup, setShowPrintPopup] = useState(false);
   const navigate = useNavigate();
 
   const fetchPorts = useCallback(async () => {
@@ -150,7 +151,12 @@ const SpreadsheetDialog = ({ open, onOpenChange, inspections, onRefresh }: Props
     }
   };
 
-  const handlePrint = () => {
+  const handlePrintClick = () => {
+    setShowPrintPopup(true);
+  };
+
+  const handlePrintConfirm = () => {
+    setShowPrintPopup(false);
     navigate(`/print?month=${selectedMonth}&year=${selectedYear}`);
     onOpenChange(false);
   };
@@ -182,7 +188,7 @@ const SpreadsheetDialog = ({ open, onOpenChange, inspections, onRefresh }: Props
                 {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Button variant="outline" className="gap-2 font-bold ml-auto" onClick={handlePrint}>
+            <Button variant="outline" className="gap-2 font-bold ml-auto" onClick={handlePrintClick}>
               <Printer className="h-4 w-4" /> Imprimir
             </Button>
           </div>
@@ -236,7 +242,7 @@ const SpreadsheetDialog = ({ open, onOpenChange, inspections, onRefresh }: Props
               <thead>
                 <tr className="border-b-2 border-foreground/20">
                   <th className="p-2 text-left font-bold">Código</th>
-                  <th className="p-2 text-left font-bold">Ponto</th>
+                  <th className="p-2 text-left font-bold">Posto</th>
                   <th className="p-2 text-left font-bold">Data</th>
                   <th className="p-2 text-center font-bold">Manômetro</th>
                   <th className="p-2 text-center font-bold">Lacre</th>
@@ -251,7 +257,7 @@ const SpreadsheetDialog = ({ open, onOpenChange, inspections, onRefresh }: Props
                 {inactivePorts.map((p) => (
                   <tr key={`inactive-${p.id}`} className="border-b border-border bg-muted/30">
                     <td className="p-2 font-bold text-muted-foreground" colSpan={2}>
-                      Ponto {p.number}
+                      Posto {p.number}
                     </td>
                     <td className="p-2 text-muted-foreground font-bold" colSpan={7}>INATIVO</td>
                     <td className="p-2"></td>
@@ -271,7 +277,7 @@ const SpreadsheetDialog = ({ open, onOpenChange, inspections, onRefresh }: Props
                             <button className="hover:underline font-medium cursor-pointer">{insp.port}</button>
                           </PopoverTrigger>
                           <PopoverContent className="w-60 text-sm">
-                            <p className="font-bold text-xs mb-1">Ponto {insp.port}</p>
+                            <p className="font-bold text-xs mb-1">Posto {insp.port}</p>
                             <p className="text-muted-foreground text-xs">{getPortDescription(insp.port) || 'Sem descrição'}</p>
                           </PopoverContent>
                         </Popover>
@@ -293,6 +299,27 @@ const SpreadsheetDialog = ({ open, onOpenChange, inspections, onRefresh }: Props
                 )}
               </tbody>
             </table>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Print popup */}
+      <Dialog open={showPrintPopup} onOpenChange={setShowPrintPopup}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black text-center">Imprimir Relatório</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border p-4 bg-muted/30">
+              <p className="text-sm text-center text-muted-foreground">
+                Recomendamos selecionar a opção <strong>"Salvar como PDF"</strong> na tela de impressão para melhor qualidade do documento.
+              </p>
+            </div>
+            <div className="flex justify-center">
+              <Button className="h-12 px-8 text-lg font-bold gap-2" onClick={handlePrintConfirm}>
+                <Printer className="h-5 w-5" /> Imprimir
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
