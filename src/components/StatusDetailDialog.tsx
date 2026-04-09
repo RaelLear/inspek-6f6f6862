@@ -19,25 +19,12 @@ const StatusDetailDialog = ({ open, onOpenChange, extinguishers, filter, onRefre
   const [approveId, setApproveId] = useState<string | null>(null);
   const [confirmAllReview, setConfirmAllReview] = useState(false);
 
-  const now = new Date();
-
   const filtered = filter === 'Total'
     ? extinguishers
     : filter === 'Aprovados'
     ? extinguishers.filter(e => e.status === 'Aprovado')
     : filter === 'Em Revisão'
-    ? extinguishers.filter(e => {
-        if (e.status !== 'Em Revisão') return false;
-        if (e.review_send_date) {
-          const parts = e.review_send_date.split('/');
-          if (parts.length === 3) {
-            const sendDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-            const diffDays = Math.ceil((now.getTime() - sendDate.getTime()) / (1000 * 60 * 60 * 24));
-            if (diffDays >= 14) return false;
-          }
-        }
-        return true;
-      })
+    ? extinguishers.filter(e => e.status === 'Em Revisão')
     : filter === 'Obstruídos'
     ? extinguishers.filter(e => e.status === 'Obstruído')
     : extinguishers;
@@ -76,34 +63,20 @@ const StatusDetailDialog = ({ open, onOpenChange, extinguishers, filter, onRefre
     try {
       const reviewItems = extinguishers.filter(e => e.status === 'Em Revisão');
       for (const ext of reviewItems) {
-        await supabase.from('extinguishers').delete().eq('id', ext.id);
+        // Instead of deleting, mark as approved with return date
+        await supabase.from('extinguishers').update({
+          status: 'Aprovado',
+          review_return_date: new Date().toLocaleDateString('pt-BR'),
+          review_send_date: null,
+        }).eq('id', ext.id);
       }
-      toast.success(`${reviewItems.length} extintor(es) removidos. Cadastre os novos que chegaram.`);
+      toast.success(`${reviewItems.length} extintor(es) confirmados. Status atualizado para aprovado.`);
       setConfirmAllReview(false);
       onRefresh?.();
     } catch (err: any) {
       toast.error('Erro: ' + err.message);
     }
   };
-
-  // Auto-approve (delete) extinguishers in review for 14+ days
-  const autoApprove = async () => {
-    const toApprove = extinguishers.filter(e => {
-      if (e.status !== 'Em Revisão') return false;
-      if (!e.review_send_date) return false;
-      const parts = e.review_send_date.split('/');
-      if (parts.length !== 3) return false;
-      const sendDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-      const diffDays = Math.ceil((now.getTime() - sendDate.getTime()) / (1000 * 60 * 60 * 24));
-      return diffDays >= 14;
-    });
-    for (const ext of toApprove) {
-      await supabase.from('extinguishers').delete().eq('id', ext.id);
-    }
-    if (toApprove.length > 0) onRefresh?.();
-  };
-
-  if (open) { autoApprove(); }
 
   const reviewCount = extinguishers.filter(e => e.status === 'Em Revisão').length;
 
@@ -135,11 +108,7 @@ const StatusDetailDialog = ({ open, onOpenChange, extinguishers, filter, onRefre
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="font-black text-lg">{ext.code}</span>
-                      {ext.status === 'Em Revisão' && ext.port ? (
-                        <span className="text-status-review text-sm font-bold">Ponto: {ext.port}</span>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">Ponto: {ext.port || '-'}</span>
-                      )}
+                      <span className="text-muted-foreground text-sm">Posto: {ext.port || '-'}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className={`text-xs font-bold ${getStatusColor(ext.status)}`}>{ext.status}</span>
@@ -186,7 +155,7 @@ const StatusDetailDialog = ({ open, onOpenChange, extinguishers, filter, onRefre
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar chegada dos novos extintores?</AlertDialogTitle>
             <AlertDialogDescription>
-              Todos os {reviewCount} extintores em revisão serão removidos do sistema. Você poderá cadastrar os novos extintores que chegaram na próxima inspeção.
+              Todos os {reviewCount} extintores em revisão serão marcados como aprovados com data de retorno registrada.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

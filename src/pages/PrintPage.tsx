@@ -5,9 +5,8 @@ import { Inspection, displayWarranty, displayThirdLevel } from '@/lib/types';
 import { useSubscription } from '@/components/SubscriptionBlocker';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Download, Share2, ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft, Printer } from 'lucide-react';
 import { toast } from 'sonner';
-import html2canvas from 'html2canvas';
 
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -69,83 +68,6 @@ const PrintPage = () => {
 
   const isLastPage = (pageIndex: number) => pageIndex === totalPages - 1;
 
-  const applyCloneStyles = (clone: HTMLElement) => {
-    const cells = clone.querySelectorAll('td, th');
-    cells.forEach((cell) => {
-      const el = cell as HTMLElement;
-      el.style.verticalAlign = 'middle';
-      el.style.textAlign = 'center';
-      el.style.lineHeight = '1.2';
-      el.style.overflow = 'visible';
-      el.style.whiteSpace = 'nowrap';
-      el.style.padding = '8px 8px';
-      el.style.fontSize = '12px';
-    });
-    const ths = clone.querySelectorAll('th');
-    ths.forEach((th) => {
-      const el = th as HTMLElement;
-      el.style.fontSize = '12px';
-      el.style.padding = '10px 8px';
-    });
-  };
-
-  const handleDownload = async () => {
-    if (!printRef.current) return;
-    try {
-      const pages = printRef.current.querySelectorAll('.print-page');
-      for (let i = 0; i < pages.length; i++) {
-        const clone = (pages[i] as HTMLElement).cloneNode(true) as HTMLElement;
-        clone.style.position = 'absolute';
-        clone.style.left = '-9999px';
-        clone.style.top = '0';
-        document.body.appendChild(clone);
-        applyCloneStyles(clone);
-        const canvas = await html2canvas(clone, {
-          scale: 2, backgroundColor: '#ffffff', useCORS: true,
-          width: A4_WIDTH, height: A4_HEIGHT, windowWidth: A4_WIDTH, windowHeight: A4_HEIGHT, logging: false,
-        });
-        document.body.removeChild(clone);
-        const link = document.createElement('a');
-        link.download = `inspecao-${MONTHS[month]}-${year}${pages.length > 1 ? `-p${i + 1}` : ''}.png`;
-        link.href = canvas.toDataURL('image/png', 1.0);
-        link.click();
-      }
-      toast.success('Download realizado!');
-    } catch {
-      toast.error('Erro ao gerar imagem.');
-    }
-  };
-
-  const handleShare = async () => {
-    if (!printRef.current) return;
-    try {
-      const pages = printRef.current.querySelectorAll('.print-page');
-      const files: File[] = [];
-      for (let i = 0; i < pages.length; i++) {
-        const clone = (pages[i] as HTMLElement).cloneNode(true) as HTMLElement;
-        clone.style.position = 'absolute';
-        clone.style.left = '-9999px';
-        clone.style.top = '0';
-        document.body.appendChild(clone);
-        applyCloneStyles(clone);
-        const canvas = await html2canvas(clone, {
-          scale: 2, backgroundColor: '#ffffff', useCORS: true,
-          width: A4_WIDTH, height: A4_HEIGHT, windowWidth: A4_WIDTH, windowHeight: A4_HEIGHT, logging: false,
-        });
-        document.body.removeChild(clone);
-        const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/png', 1.0));
-        if (blob) files.push(new File([blob], `inspecao-${MONTHS[month]}-${year}-p${i + 1}.png`, { type: 'image/png' }));
-      }
-      if (navigator.share && files.length) {
-        await navigator.share({ files, title: `Inspeção ${MONTHS[month]} ${year}` });
-      } else {
-        toast.error('Compartilhamento não suportado neste navegador.');
-      }
-    } catch {
-      toast.error('Erro ao compartilhar.');
-    }
-  };
-
   const handlePrint = () => { window.print(); };
 
   const showWatermark = !isSubscribed || showPromo;
@@ -167,7 +89,7 @@ const PrintPage = () => {
     <thead>
       <tr>
         <th style={thStyle}>Código</th>
-        <th style={thStyle}>Ponto</th>
+        <th style={thStyle}>Posto</th>
         <th style={thStyle}>Data</th>
         <th style={thStyle}>Manômetro</th>
         <th style={thStyle}>Lacre</th>
@@ -245,7 +167,7 @@ const PrintPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="no-print flex items-center gap-3 p-4 border-b">
-        <Button variant="ghost" onClick={() => navigate('/dashboard')}>
+        <Button variant="ghost" onClick={() => navigate('/extintores')}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
         </Button>
         {isSubscribed && (
@@ -254,15 +176,9 @@ const PrintPage = () => {
             <span className="text-xs text-muted-foreground">Divulgue nosso trabalho</span>
           </div>
         )}
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto">
           <Button variant="outline" className="gap-2" onClick={handlePrint}>
             <Printer className="h-4 w-4" /> Imprimir
-          </Button>
-          <Button variant="outline" className="gap-2" onClick={handleDownload}>
-            <Download className="h-4 w-4" /> Download
-          </Button>
-          <Button variant="outline" className="gap-2" onClick={handleShare}>
-            <Share2 className="h-4 w-4" /> Compartilhar
           </Button>
         </div>
       </div>

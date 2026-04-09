@@ -112,7 +112,7 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
   };
 
   const handleSave = async () => {
-    if (!code || !port) { toast.error('Código e ponto são obrigatórios.'); return; }
+    if (!code || !port) { toast.error('Código e posto são obrigatórios.'); return; }
     setSaving(true);
     try {
       const existingPort = ports.find(p => p.number === port);
@@ -191,15 +191,15 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
   }, [existingPortMatch?.id]);
 
   const handleAddPort = async () => {
-    if (!newPortNumber) { toast.error('Número do ponto é obrigatório.'); return; }
-    if (existingPortMatch) { toast.error('Ponto já cadastrado.'); return; }
+    if (!newPortNumber) { toast.error('Número do posto é obrigatório.'); return; }
+    if (existingPortMatch) { toast.error('Posto já cadastrado.'); return; }
     try {
       const { error } = await supabase.from('ports').insert({
         number: newPortNumber,
         description: newPortDescription || null,
       });
       if (error) throw error;
-      toast.success('Ponto adicionado!');
+      toast.success('Posto adicionado!');
       resetPortForm();
       setMode('list');
       fetchPorts();
@@ -215,7 +215,7 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
         description: newPortDescription || null,
       }).eq('id', existingPortMatch.id);
       if (error) throw error;
-      toast.success('Ponto atualizado!');
+      toast.success('Posto atualizado!');
       fetchPorts();
     } catch (err: any) {
       toast.error('Erro: ' + err.message);
@@ -230,7 +230,7 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
     }
     const desc = (existingPortMatch.description || '').replace(' [INATIVO]', '');
     await supabase.from('ports').update({ description: desc + ' [INATIVO]' }).eq('id', existingPortMatch.id);
-    toast.success('Ponto marcado como inativo!');
+    toast.success('Posto marcado como inativo!');
     fetchPorts();
     onRefresh();
   };
@@ -239,7 +239,7 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
     if (!existingPortMatch) return;
     const desc = (existingPortMatch.description || '').replace(' [INATIVO]', '');
     await supabase.from('ports').update({ description: desc || null }).eq('id', existingPortMatch.id);
-    toast.success('Ponto reativado!');
+    toast.success('Posto reativado!');
     fetchPorts();
     onRefresh();
   };
@@ -249,7 +249,7 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
     try {
       const { error } = await supabase.from('ports').delete().eq('id', deletePortId);
       if (error) throw error;
-      toast.success('Ponto removido!');
+      toast.success('Posto removido!');
       setDeletePortId(null);
       resetPortForm();
       fetchPorts();
@@ -292,8 +292,8 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
     if (numpadTarget === 'warrantyExpiry') return { maxDigits: 6, isMonthYear: true, label: 'Vencimento Garantia (MM/AAAA)' };
     if (numpadTarget === 'thirdLevel') return { maxDigits: 4, isYearOnly: true, label: '3º Nível (AAAA)' };
     if (numpadTarget === 'code') return { maxDigits: 3, label: 'Código' };
-    if (numpadTarget === 'port') return { maxDigits: 2, label: 'Ponto' };
-    if (numpadTarget === 'newPort') return { maxDigits: 2, label: 'Número do Ponto' };
+    if (numpadTarget === 'port') return { maxDigits: 2, label: 'Posto' };
+    if (numpadTarget === 'newPort') return { maxDigits: 2, label: 'Número do Posto' };
     return { maxDigits: 4, label: 'Peso' };
   };
 
@@ -308,7 +308,7 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-60 text-sm">
-          <p className="font-bold text-xs mb-1">Ponto {portNumber}</p>
+          <p className="font-bold text-xs mb-1">Posto {portNumber}</p>
           <p className="text-muted-foreground text-xs">{desc || 'Sem descrição'}</p>
         </PopoverContent>
       </Popover>
@@ -332,7 +332,7 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-black">
-              {mode === 'list' ? 'Gerenciador de Extintores' : mode === 'numpad' ? 'Numpad' : mode === 'addPort' ? 'Novo Ponto' : editId ? 'Editar Extintor' : 'Novo Extintor'}
+              {mode === 'list' ? 'Gerenciador de Extintores' : mode === 'numpad' ? 'Numpad' : mode === 'addPort' ? 'Novo Posto' : editId ? 'Editar Extintor' : 'Novo Extintor'}
             </DialogTitle>
           </DialogHeader>
 
@@ -347,7 +347,7 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
             <div className="space-y-3">
               <Button variant="ghost" onClick={() => { resetPortForm(); setMode('list'); }}>← Voltar</Button>
               <div className="cursor-pointer rounded-lg border p-3 hover:bg-muted/50" onClick={() => { setNumpadTarget('newPort'); setNumpadValue(newPortNumber.replace(/\D/g, '')); setMode('numpad'); }}>
-                <p className="text-xs text-muted-foreground">Número do Ponto</p>
+                <p className="text-xs text-muted-foreground">Número do Posto</p>
                 <p className="text-lg font-bold">{newPortNumber || 'Toque para digitar'}</p>
               </div>
               <div className="rounded-lg border p-3">
@@ -366,7 +366,7 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
                   </div>
                   {isExistingPortInactive ? (
                     <Button variant="outline" className="w-full h-12 font-bold gap-2 border-status-approved text-status-approved hover:bg-status-approved/10" onClick={handleReactivatePort}>
-                      <RotateCcw className="h-4 w-4" /> Reativar Ponto
+                      <RotateCcw className="h-4 w-4" /> Reativar Posto
                     </Button>
                   ) : (
                     <Button variant="outline" className="w-full h-12 font-bold gap-2 border-status-urgent text-status-urgent hover:bg-status-urgent/10" onClick={handleSetPortInactive}>
@@ -376,7 +376,7 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
                 </div>
               ) : (
                 <Button className="w-full h-12 text-lg font-bold" onClick={handleAddPort}>
-                  Adicionar Ponto
+                  Adicionar Posto
                 </Button>
               )}
             </div>
@@ -389,13 +389,13 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
                   <Plus className="h-4 w-4" /> Adicionar Extintor
                 </Button>
                 <Button variant="outline" className="flex-1 gap-2 font-bold" onClick={() => { resetPortForm(); setMode('addPort'); }}>
-                  <MapPin className="h-4 w-4" /> Adicionar Ponto
+                  <MapPin className="h-4 w-4" /> Adicionar Posto
                 </Button>
               </div>
 
               {emptyPorts.length > 0 && (
                 <div className="rounded-xl border border-dashed border-muted-foreground/30 p-3 space-y-2">
-                  <p className="text-xs font-bold text-muted-foreground">Pontos Vazios</p>
+                  <p className="text-xs font-bold text-muted-foreground">Postos Vazios</p>
                   <div className="flex flex-wrap gap-2">
                     {emptyPorts.map((p) => (
                       <Popover key={p.id}>
@@ -406,7 +406,7 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
                           </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-60 text-sm">
-                          <p className="font-bold text-xs mb-1">Ponto {p.number}</p>
+                          <p className="font-bold text-xs mb-1">Posto {p.number}</p>
                           <p className="text-muted-foreground text-xs">{p.description || 'Sem descrição'}</p>
                         </PopoverContent>
                       </Popover>
@@ -424,9 +424,10 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
                     <div key={ext.id} className="rounded-xl border p-3 space-y-1">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="font-black text-lg">{ext.code}</span>
-                          <span className="text-muted-foreground text-sm">Ponto: {ext.port || '-'}</span>
+                          {/* Posto is highlighted, extintor code is secondary */}
+                          <span className="font-black text-lg">Posto {ext.port || '-'}</span>
                           <PortDescriptionBadge portNumber={ext.port} />
+                          <span className="text-muted-foreground text-sm">Ext. {ext.code}</span>
                         </div>
                         <div className="flex gap-1">
                           {ext.status !== 'Em Revisão' && (
@@ -482,11 +483,11 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
                 <p className="text-lg font-bold">{code || 'Toque para digitar'}</p>
               </div>
               <div className="cursor-pointer rounded-lg border p-3 hover:bg-muted/50" onClick={() => openNumpad('port', port)}>
-                <p className="text-xs text-muted-foreground">Ponto</p>
+                <p className="text-xs text-muted-foreground">Posto</p>
                 <p className="text-lg font-bold">{port || 'Toque para digitar'}</p>
               </div>
               <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">Descrição do Ponto (opcional)</p>
+                <p className="text-xs text-muted-foreground">Descrição do Posto (opcional)</p>
                 <Input value={portDescription} onChange={(e) => setPortDescription(e.target.value)} className="mt-1" placeholder="Ex: Corredor principal" />
               </div>
               <div className="rounded-lg border p-3">
@@ -529,7 +530,7 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
       <DelayedConfirmDialog
         open={!!deletePortId}
         onOpenChange={(v) => { if (!v) setDeletePortId(null); }}
-        title="Excluir ponto?"
+        title="Excluir posto?"
         description="Esta ação não pode ser desfeita."
         onConfirm={handleDeletePort}
         delaySeconds={2}

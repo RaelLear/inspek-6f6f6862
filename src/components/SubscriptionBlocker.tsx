@@ -3,9 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, AlertCircle } from 'lucide-react';
+import { AlertCircle, MessageCircle } from 'lucide-react';
 
-const CHECKOUT_URL = 'https://ggcheckout.com.br/checkout/v3/TiAVZAEamTV4bjD6gfcU';
+const WHATSAPP_URL = 'https://wa.me/5531999647782';
 
 interface Subscription {
   status: string;
@@ -38,7 +38,7 @@ export const useSubscription = () => {
   };
 
   const isActive = (): boolean => {
-    if (!subscription) return true; // grace period if no sub record yet
+    if (!subscription) return true;
     if (subscription.permanent) return true;
     if (subscription.status === 'active') return true;
     if (subscription.status === 'trial') {
@@ -98,7 +98,7 @@ export const useSubscription = () => {
 };
 
 const SubscriptionBlocker = () => {
-  const { isActive, isCancelled, loading } = useSubscription();
+  const { isActive, loading } = useSubscription();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -115,31 +115,19 @@ const SubscriptionBlocker = () => {
             <AlertCircle className="h-8 w-8 text-destructive" />
           </div>
           <DialogTitle className="text-center text-xl font-black">
-            {isCancelled
-              ? 'Hey, tivemos problemas com sua assinatura'
-              : 'Hey, seu teste gratuito acabou!'}
+            Seu período de teste acabou
           </DialogTitle>
           <DialogDescription className="text-center text-base">
-            {isCancelled
-              ? 'Esperamos poder trabalhar novamente com você! Renove sua assinatura para continuar usando o inSpek.'
-              : 'Que tal ter acesso completo à ferramenta? Assine por apenas R$ 10/mês e continue gerenciando seus extintores com eficiência.'}
+            Para continuar utilizando o inSpek com todas as funcionalidades, entre em contato com nosso suporte para ativar seu plano pago.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-3">
+        <div className="flex justify-center">
           <Button
-            className="w-full h-12 text-lg font-bold gap-2"
-            onClick={() => window.open(CHECKOUT_URL, '_blank')}
+            className="h-12 px-8 text-lg font-bold gap-2"
+            onClick={() => window.open(WHATSAPP_URL, '_blank')}
           >
-            <ExternalLink className="h-5 w-5" />
-            {isCancelled ? 'Renovar com Cartão' : 'Assinar com Cartão'}
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full h-12 text-lg font-bold gap-2"
-            onClick={() => window.open(CHECKOUT_URL, '_blank')}
-          >
-            <ExternalLink className="h-5 w-5" />
-            Pagar com PIX
+            <MessageCircle className="h-5 w-5" />
+            Conversar com o Suporte
           </Button>
         </div>
       </DialogContent>

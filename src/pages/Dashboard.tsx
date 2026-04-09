@@ -23,8 +23,6 @@ import { ClipboardList, List, Table, BarChart3, Sun, Moon, LogOut, Download, Men
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-const CHECKOUT_URL = 'https://ggcheckout.com.br/checkout/v3/TiAVZAEamTV4bjD6gfcU';
-
 type LayoutScale = 'compact' | 'normal' | 'spacious';
 
 interface UserProfile {
@@ -73,7 +71,6 @@ const Dashboard = () => {
     if (!done) setShowTutorial(true);
   }, []);
 
-  // Apply default workspace on mount once teams are loaded
   useEffect(() => {
     const saved = localStorage.getItem('inspek-default-workspace');
     if (saved && saved !== 'personal' && teams.length > 0) {
@@ -172,8 +169,6 @@ const Dashboard = () => {
     fetchTeams();
   };
 
-
-  // Fetch own profile on mount directly from client
   useEffect(() => {
     const fetchOwnProfile = async () => {
       if (!user) { setOwnProfile(null); return; }
@@ -209,11 +204,11 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       {showTutorial && <OnboardingTutorial onComplete={() => setShowTutorial(false)} />}
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b bg-background/95 backdrop-blur px-4 py-3">
+      {/* Header - thinner */}
+      <header className="sticky top-0 z-40 flex items-center justify-between border-b bg-background/95 backdrop-blur px-4 h-10">
         <div className="flex items-center gap-1">
-          <img src="/logo-site.png" alt="inSpek" className="h-6 w-6 object-contain" />
-          <span className="text-lg font-black tracking-tight">inSpek</span>
+          <img src="/logo-site.png" alt="inSpek" className="h-5 w-5 object-contain" />
+          <span className="text-base font-black tracking-tight">inSpek</span>
           {!isPersonal && (
             <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">
               {currentTeamName}
@@ -221,20 +216,19 @@ const Dashboard = () => {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          {!subLoading && (
-            <button
-              className={`text-xs font-bold px-2 py-1 rounded-full border ${statusColorClass} ${statusClickable ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
-              onClick={() => { if (statusClickable) window.open(CHECKOUT_URL, '_blank'); }}
-              disabled={!statusClickable}
-            >
-              {statusLabel}
-            </button>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleTheme}>
+            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
+          {!isInstalled && deferredPrompt && (
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleInstall}>
+              <Download className="h-4 w-4" />
+            </Button>
           )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
+              <Button variant="ghost" size="icon" className="h-8 w-8 relative">
                 <Menu className="h-5 w-5" />
                 {statusColor === 'red' && (
                   <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-destructive" />
@@ -255,11 +249,11 @@ const Dashboard = () => {
                 </>
               )}
               
-              {/* Subscription status */}
+              {/* Subscription status in menu */}
               <DropdownMenuItem
                 className={`gap-2 font-bold ${statusColorClass} ${statusClickable ? 'cursor-pointer' : ''}`}
                 disabled={!statusClickable}
-                onClick={() => { if (statusClickable) window.open(CHECKOUT_URL, '_blank'); }}
+                onClick={() => { if (statusClickable) window.open('https://wa.me/5531999647782', '_blank'); }}
               >
                 <CreditCard className="h-4 w-4" />
                 {statusLabel}
@@ -300,11 +294,6 @@ const Dashboard = () => {
               <DropdownMenuItem className="gap-2" onClick={() => setShowSettings(true)}>
                 <Settings className="h-4 w-4" /> Configurações
               </DropdownMenuItem>
-              {!isInstalled && deferredPrompt && (
-                <DropdownMenuItem className="gap-2" onClick={handleInstall}>
-                  <Download className="h-4 w-4" /> Instalar App
-                </DropdownMenuItem>
-              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem className="gap-2 text-destructive" onClick={logout}>
                 <LogOut className="h-4 w-4" /> Sair
