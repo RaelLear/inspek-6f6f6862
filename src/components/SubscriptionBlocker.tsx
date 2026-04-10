@@ -54,7 +54,8 @@ export const useSubscription = () => {
   const trialDaysLeft = getTrialDaysLeft();
 
   const getStatusLabel = (): string => {
-    if (!subscription) return 'Carregando...';
+    if (loading) return 'Carregando...';
+    if (!subscription) return 'Teste Grátis (90 dias)';
     if (isPermanent) return 'Acesso Permanente';
     if (isPaid) return 'Assinatura Ativa';
     if (isTrial && trialDaysLeft !== null) {
