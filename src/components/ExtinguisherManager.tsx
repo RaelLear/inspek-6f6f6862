@@ -23,11 +23,12 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   extinguishers: Extinguisher[];
   onRefresh: () => void;
+  teamId?: string | null;
 }
 
 type Mode = 'list' | 'add' | 'edit' | 'numpad' | 'addPort';
 
-const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: Props) => {
+const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh, teamId }: Props) => {
   const [mode, setMode] = useState<Mode>('list');
   const [editId, setEditId] = useState<string | null>(null);
   const [code, setCode] = useState('');
@@ -50,9 +51,15 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
   const [saving, setSaving] = useState(false);
 
   const fetchPorts = useCallback(async () => {
-    const { data } = await supabase.from('ports').select('*').order('number');
+    let query = supabase.from('ports').select('*').order('number');
+    if (teamId) {
+      query = query.eq('team_id', teamId);
+    } else {
+      query = query.is('team_id', null);
+    }
+    const { data } = await query;
     if (data) setPorts(data as Port[]);
-  }, []);
+  }, [teamId]);
 
   useEffect(() => {
     if (open) fetchPorts();
@@ -117,7 +124,7 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
     try {
       const existingPort = ports.find(p => p.number === port);
       if (!existingPort) {
-        await supabase.from('ports').insert({ number: port, description: portDescription || null });
+        await supabase.from('ports').insert({ number: port, description: portDescription || null, ...(teamId ? { team_id: teamId } : {}) });
       } else if (portDescription && portDescription !== existingPort.description) {
         await supabase.from('ports').update({ description: portDescription }).eq('id', existingPort.id);
       }
@@ -126,6 +133,7 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
         code, port, type, weight,
         warranty_expiry: warrantyExpiry ? monthYearToFullDate(warrantyExpiry) : null,
         third_level: thirdLevel ? yearToFullDate(thirdLevel) : null,
+        ...(teamId ? { team_id: teamId } : {}),
       };
       if (editId) {
         const { error } = await supabase.from('extinguishers').update(data).eq('id', editId);
@@ -197,6 +205,7 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh }: P
       const { error } = await supabase.from('ports').insert({
         number: newPortNumber,
         description: newPortDescription || null,
+        ...(teamId ? { team_id: teamId } : {}),
       });
       if (error) throw error;
       toast.success('Posto adicionado!');
