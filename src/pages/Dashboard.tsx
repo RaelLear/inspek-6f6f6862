@@ -237,17 +237,14 @@ const Dashboard = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-60">
               {/* User profile info */}
-              {ownProfile && (
-                <>
-                  <div className="px-2 py-2 border-b">
-                    <p className="font-bold text-sm">{ownProfile.display_name || ownProfile.username}</p>
-                    <p className="text-xs text-muted-foreground">@{ownProfile.username}</p>
-                    {user?.email && (
-                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                    )}
-                  </div>
-                </>
-              )}
+              <div className="px-2 py-2 border-b">
+                {ownProfile && (
+                  <p className="font-bold text-sm">{ownProfile.display_name || ownProfile.username}</p>
+                )}
+                {user?.email && (
+                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                )}
+              </div>
               
               {/* Subscription status in menu */}
               <DropdownMenuItem
