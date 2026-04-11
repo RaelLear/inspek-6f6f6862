@@ -60,7 +60,7 @@ export const useSubscription = () => {
     if (isPaid) return 'Assinatura Ativa';
     if (isTrial && trialDaysLeft !== null) {
       if (trialDaysLeft <= 0) return 'Trial Expirado';
-      return `${trialDaysLeft} dia${trialDaysLeft !== 1 ? 's' : ''} grátis`;
+      return `Teste Grátis - ${trialDaysLeft} dia${trialDaysLeft !== 1 ? 's' : ''} restante${trialDaysLeft !== 1 ? 's' : ''}`;
     }
     if (isCancelled) return 'Assinatura Cancelada';
     return 'Expirado';
@@ -71,8 +71,8 @@ export const useSubscription = () => {
     if (isPermanent || isPaid) return 'green';
     if (isTrial && trialDaysLeft !== null) {
       if (trialDaysLeft <= 0) return 'red';
-      if (trialDaysLeft <= 1) return 'red';
-      if (trialDaysLeft <= 3) return 'yellow';
+      if (trialDaysLeft <= 5) return 'red';
+      if (trialDaysLeft <= 15) return 'yellow';
       return 'green';
     }
     return 'red';
