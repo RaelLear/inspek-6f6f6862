@@ -10,7 +10,7 @@ import InspectionDialog from '@/components/InspectionDialog';
 import ExtinguisherManager from '@/components/ExtinguisherManager';
 import SpreadsheetDialog from '@/components/SpreadsheetDialog';
 import MetricsDialog from '@/components/MetricsDialog';
-import UpdatePopup from '@/components/UpdatePopup';
+
 import InspectionFieldsEditor from '@/components/InspectionFieldsEditor';
 import SubscriptionBlocker, { useSubscription } from '@/components/SubscriptionBlocker';
 import OnboardingTutorial from '@/components/OnboardingTutorial';
@@ -334,7 +334,7 @@ const Dashboard = () => {
       <MetricsDialog open={showMetrics} onOpenChange={setShowMetrics} inspections={inspections} extinguishers={extinguishers} />
       <StatusDetailDialog open={showStatusDetail} onOpenChange={setShowStatusDetail} extinguishers={extinguishers} filter={statusFilter} onRefresh={fetchData} />
       <InspectionFieldsEditor open={showFieldsEditor} onOpenChange={setShowFieldsEditor} />
-      <UpdatePopup />
+      
       <SubscriptionBlocker />
 
       {/* Team config */}
