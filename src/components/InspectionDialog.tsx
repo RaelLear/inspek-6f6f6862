@@ -13,6 +13,7 @@ interface InspectionDialogProps {
   onOpenChange: (open: boolean) => void;
   extinguishers: Extinguisher[];
   onComplete: () => void;
+  teamId?: string | null;
 }
 
 type Step = 'code' | 'port' | 'conformity' | 'dates';
@@ -24,7 +25,7 @@ interface ConformityState {
   floorPaint: 'Conforme' | 'Não Conforme' | null;
 }
 
-const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete }: InspectionDialogProps) => {
+const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete, teamId }: InspectionDialogProps) => {
   const [step, setStep] = useState<Step>('code');
   const [code, setCode] = useState('');
   const [port, setPort] = useState('');
@@ -143,6 +144,7 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete }: Ins
       if (!existing) {
         const { data, error } = await supabase.from('extinguishers').insert({
           code, port, status: specialStatus,
+          ...(teamId ? { team_id: teamId } : {}),
         }).select().single();
         if (error) throw error;
         existing = data as Extinguisher;
@@ -161,6 +163,7 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete }: Ins
         seal_status: 'Conforme',
         plate_status: 'Conforme',
         floor_paint_status: 'Conforme',
+        ...(teamId ? { team_id: teamId } : {}),
       });
       if (inspError) throw inspError;
 
@@ -213,6 +216,7 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete }: Ins
           warranty_expiry: warrantyFormatted,
           third_level: thirdFormatted,
           review_send_date: reviewSendDate,
+          ...(teamId ? { team_id: teamId } : {}),
         }).select().single();
         if (error) throw error;
         existing = data as Extinguisher;
@@ -243,6 +247,7 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete }: Ins
         seal_review_date: formattedSealReview,
         warranty_expiry: warrantyFormatted,
         third_level: thirdFormatted,
+        ...(teamId ? { team_id: teamId } : {}),
       });
       if (inspError) throw inspError;
 

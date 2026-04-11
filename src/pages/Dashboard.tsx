@@ -328,8 +328,8 @@ const Dashboard = () => {
       </div>
 
       {/* Dialogs */}
-      <InspectionDialog open={showInspection} onOpenChange={setShowInspection} extinguishers={extinguishers} onComplete={fetchData} />
-      <ExtinguisherManager open={showManager} onOpenChange={setShowManager} extinguishers={extinguishers} onRefresh={fetchData} />
+      <InspectionDialog open={showInspection} onOpenChange={setShowInspection} extinguishers={extinguishers} onComplete={fetchData} teamId={currentTeamId} />
+      <ExtinguisherManager open={showManager} onOpenChange={setShowManager} extinguishers={extinguishers} onRefresh={fetchData} teamId={currentTeamId} />
       <SpreadsheetDialog open={showSpreadsheet} onOpenChange={setShowSpreadsheet} inspections={inspections} onRefresh={fetchData} />
       <MetricsDialog open={showMetrics} onOpenChange={setShowMetrics} inspections={inspections} extinguishers={extinguishers} />
       <StatusDetailDialog open={showStatusDetail} onOpenChange={setShowStatusDetail} extinguishers={extinguishers} filter={statusFilter} onRefresh={fetchData} />
