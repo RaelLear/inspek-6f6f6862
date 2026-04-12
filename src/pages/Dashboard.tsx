@@ -62,22 +62,31 @@ const Dashboard = () => {
   const [layoutScale, setLayoutScale] = useState<LayoutScale>(() => {
     return (localStorage.getItem('inspek-layout') as LayoutScale) || 'normal';
   });
-  const [defaultWorkspace, setDefaultWorkspace] = useState<string>(() => {
-    return localStorage.getItem('inspek-default-workspace') || 'personal';
-  });
+  const [defaultWorkspace, setDefaultWorkspace] = useState<string>('personal');
 
   useEffect(() => {
     const done = localStorage.getItem('inspek-tutorial-done');
     if (!done) setShowTutorial(true);
   }, []);
 
+  // Load default workspace from cloud
   useEffect(() => {
-    const saved = localStorage.getItem('inspek-default-workspace');
-    if (saved && saved !== 'personal' && teams.length > 0) {
-      const teamExists = teams.find(t => t.id === saved);
-      if (teamExists) setCurrentTeamId(saved);
-    }
-  }, [teams]);
+    const loadSettings = async () => {
+      if (!user) return;
+      const { data } = await (supabase.from as any)('user_settings')
+        .select('default_workspace')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (data?.default_workspace) {
+        setDefaultWorkspace(data.default_workspace);
+        if (data.default_workspace !== 'personal' && teams.length > 0) {
+          const teamExists = teams.find((t: any) => t.id === data.default_workspace);
+          if (teamExists) setCurrentTeamId(data.default_workspace);
+        }
+      }
+    };
+    loadSettings();
+  }, [user, teams]);
 
   useEffect(() => {
     if (isDark) document.documentElement.classList.add('dark');
@@ -383,7 +392,7 @@ const Dashboard = () => {
                 <Button
                   variant={defaultWorkspace === 'personal' ? 'default' : 'outline'}
                   className="w-full justify-start gap-2 text-sm"
-                  onClick={() => { setDefaultWorkspace('personal'); localStorage.setItem('inspek-default-workspace', 'personal'); }}
+                  onClick={async () => { setDefaultWorkspace('personal'); if (user) { await (supabase.from as any)('user_settings').upsert({ user_id: user.id, default_workspace: 'personal' }, { onConflict: 'user_id' }); } }}
                 >
                   <Users className="h-4 w-4" /> Pessoal
                 </Button>
@@ -392,7 +401,7 @@ const Dashboard = () => {
                     key={team.id}
                     variant={defaultWorkspace === team.id ? 'default' : 'outline'}
                     className="w-full justify-start gap-2 text-sm"
-                    onClick={() => { setDefaultWorkspace(team.id); localStorage.setItem('inspek-default-workspace', team.id); }}
+                    onClick={async () => { setDefaultWorkspace(team.id); if (user) { await (supabase.from as any)('user_settings').upsert({ user_id: user.id, default_workspace: team.id }, { onConflict: 'user_id' }); } }}
                   >
                     <Building className="h-4 w-4" /> {team.name}
                   </Button>
