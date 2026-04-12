@@ -14,14 +14,21 @@ interface ExpiryItem {
 const NotificationBlock = ({ extinguishers }: NotificationBlockProps) => {
   const items: ExpiryItem[] = [];
 
-  extinguishers.forEach((ext) => {
-    const wDays = daysUntil(ext.warranty_expiry);
-    if (wDays !== null) {
-      items.push({ ext, days: wDays, type: 'Vencimento Garantia' });
+  // Filter out extinguishers in review - they already have warranty/third as '--'
+  const activeExtinguishers = extinguishers.filter(e => e.status !== 'Em Revisão');
+
+  activeExtinguishers.forEach((ext) => {
+    if (ext.warranty_expiry && ext.warranty_expiry !== '--') {
+      const wDays = daysUntil(ext.warranty_expiry);
+      if (wDays !== null) {
+        items.push({ ext, days: wDays, type: 'Vencimento Garantia' });
+      }
     }
-    const tDays = daysUntil(ext.third_level);
-    if (tDays !== null) {
-      items.push({ ext, days: tDays, type: '3º Nível' });
+    if (ext.third_level && ext.third_level !== '--') {
+      const tDays = daysUntil(ext.third_level);
+      if (tDays !== null) {
+        items.push({ ext, days: tDays, type: '3º Nível' });
+      }
     }
   });
 

@@ -63,14 +63,10 @@ const StatusDetailDialog = ({ open, onOpenChange, extinguishers, filter, onRefre
     try {
       const reviewItems = extinguishers.filter(e => e.status === 'Em Revisão');
       for (const ext of reviewItems) {
-        // Instead of deleting, mark as approved with return date
-        await supabase.from('extinguishers').update({
-          status: 'Aprovado',
-          review_return_date: new Date().toLocaleDateString('pt-BR'),
-          review_send_date: null,
-        }).eq('id', ext.id);
+        // Delete the extinguisher - new ones will be added to replace them
+        await supabase.from('extinguishers').delete().eq('id', ext.id);
       }
-      toast.success(`${reviewItems.length} extintor(es) confirmados. Status atualizado para aprovado.`);
+      toast.success(`${reviewItems.length} extintor(es) removidos. Adicione os novos extintores no gerenciador.`);
       setConfirmAllReview(false);
       onRefresh?.();
     } catch (err: any) {
@@ -88,7 +84,6 @@ const StatusDetailDialog = ({ open, onOpenChange, extinguishers, filter, onRefre
             <DialogTitle className="text-xl font-black">{filter} ({sorted.length})</DialogTitle>
           </DialogHeader>
 
-          {/* Confirm arrival button for review filter */}
           {filter === 'Em Revisão' && reviewCount > 0 && (
             <Button
               className="w-full h-12 gap-2 font-bold bg-foreground text-background hover:bg-foreground/90"
@@ -122,8 +117,8 @@ const StatusDetailDialog = ({ open, onOpenChange, extinguishers, filter, onRefre
                   <div className="text-xs text-muted-foreground flex flex-wrap gap-3">
                     <span>{ext.type}</span>
                     <span>{ext.weight}</span>
-                    {ext.warranty_expiry && <span>Garantia: {displayWarranty(ext.warranty_expiry)}</span>}
-                    {ext.third_level && <span>3º Nível: {displayThirdLevel(ext.third_level)}</span>}
+                    {ext.warranty_expiry && ext.warranty_expiry !== '--' && <span>Garantia: {displayWarranty(ext.warranty_expiry)}</span>}
+                    {ext.third_level && ext.third_level !== '--' && <span>3º Nível: {displayThirdLevel(ext.third_level)}</span>}
                   </div>
                   {ext.review_send_date && (
                     <div className="text-xs text-status-review font-medium">Enviado para revisão: {ext.review_send_date}</div>
@@ -135,7 +130,6 @@ const StatusDetailDialog = ({ open, onOpenChange, extinguishers, filter, onRefre
         </DialogContent>
       </Dialog>
 
-      {/* Approve obstructed */}
       <AlertDialog open={!!approveId} onOpenChange={(v) => { if (!v) setApproveId(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -149,13 +143,12 @@ const StatusDetailDialog = ({ open, onOpenChange, extinguishers, filter, onRefre
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Confirm all review arrival */}
       <AlertDialog open={confirmAllReview} onOpenChange={setConfirmAllReview}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar chegada dos novos extintores?</AlertDialogTitle>
             <AlertDialogDescription>
-              Todos os {reviewCount} extintores em revisão serão marcados como aprovados com data de retorno registrada.
+              Os {reviewCount} extintores em revisão serão removidos. Adicione os novos extintores pelo gerenciador nos postos correspondentes.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

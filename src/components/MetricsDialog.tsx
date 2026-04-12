@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Inspection, Extinguisher } from '@/lib/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Info } from 'lucide-react';
 
 interface Props {
   open: boolean;
@@ -34,6 +35,7 @@ const MetricsDialog = ({ open, onOpenChange, inspections }: Props) => {
         if (parts.length !== 3) return false;
         return parseInt(parts[1]) - 1 === i && parts[2] === selectedYear;
       });
+      // Only count manometer and seal non-conformities
       const reviews = monthInsps.filter(
         (insp) => insp.manometer_status === 'Não Conforme' || insp.seal_status === 'Não Conforme'
       ).length;
@@ -71,6 +73,16 @@ const MetricsDialog = ({ open, onOpenChange, inspections }: Props) => {
                 <Bar dataKey="revisões" fill="hsl(0, 72%, 51%)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+
+          {/* Disclaimer */}
+          <div className="rounded-lg border p-3 bg-muted/30 flex items-start gap-2">
+            <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              Somente não conformidades de <strong>Manômetro</strong> e <strong>Lacre</strong> são contabilizadas como revisões. 
+              Vencimento de <strong>Garantia</strong> e <strong>3º Nível</strong> são considerados revisão periódica obrigatória 
+              e não entram como métrica de comparação.
+            </p>
           </div>
         </div>
       </DialogContent>
