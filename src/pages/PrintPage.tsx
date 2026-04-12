@@ -3,10 +3,10 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Inspection, displayWarranty, displayThirdLevel } from '@/lib/types';
 import { useSubscription } from '@/components/SubscriptionBlocker';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Printer } from 'lucide-react';
-import { toast } from 'sonner';
 
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -25,8 +25,14 @@ const PrintPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isPaid, isPermanent } = useSubscription();
+  const { currentTeamId } = useWorkspace();
   const month = parseInt(searchParams.get('month') || String(new Date().getMonth()));
   const year = parseInt(searchParams.get('year') || String(new Date().getFullYear()));
+  const conformityFilter = searchParams.get('conformity') || 'all';
+  const subcategoryFilter = searchParams.get('subcategory') || 'all';
+  const warrantyMonthFilter = searchParams.get('warrantyMonth') || 'all';
+  const warrantyYearFilter = searchParams.get('warrantyYear') || 'all';
+  const thirdLevelYearFilter = searchParams.get('thirdLevelYear') || 'all';
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const printRef = useRef<HTMLDivElement>(null);
   const [showPromo, setShowPromo] = useState(false);
@@ -35,19 +41,66 @@ const PrintPage = () => {
 
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase.from('inspections').select('*');
+      let query = (supabase.from as any)('inspections').select('*');
+      if (currentTeamId) {
+        query = query.eq('team_id', currentTeamId);
+      } else {
+        query = query.is('team_id', null);
+      }
+      const { data } = await query;
       if (data) setInspections(data as Inspection[]);
     };
     fetch();
-  }, []);
+  }, [currentTeamId]);
 
   const filtered = useMemo(() => {
-    return inspections.filter((insp) => {
+    // Step 1: Filter by month/year
+    let result = inspections.filter((insp) => {
       const parts = insp.inspection_date.split('/');
       if (parts.length !== 3) return false;
       return parseInt(parts[1]) - 1 === month && parseInt(parts[2]) === year;
-    }).sort((a, b) => parseInt(a.port) - parseInt(b.port));
-  }, [inspections, month, year]);
+    });
+
+    // Step 2: Apply conformity filter (same logic as SpreadsheetDialog)
+    if (conformityFilter !== 'all') {
+      const isConforme = conformityFilter === 'conforme';
+      result = result.filter((insp) => {
+        if (subcategoryFilter === 'all') {
+          const statuses = [insp.manometer_status, insp.seal_status, insp.plate_status, insp.floor_paint_status];
+          return isConforme ? statuses.every(s => s === 'Conforme') : statuses.some(s => s === 'Não Conforme');
+        }
+        const statusMap: Record<string, string> = {
+          manometer: insp.manometer_status, seal: insp.seal_status, plate: insp.plate_status, floorPaint: insp.floor_paint_status,
+        };
+        const status = statusMap[subcategoryFilter];
+        return isConforme ? status === 'Conforme' : status === 'Não Conforme';
+      });
+    }
+
+    // Step 3: Warranty filters
+    if (warrantyMonthFilter !== 'all' || warrantyYearFilter !== 'all') {
+      result = result.filter((insp) => {
+        if (!insp.warranty_expiry) return false;
+        const parts = insp.warranty_expiry.split('/');
+        if (parts.length !== 3) return false;
+        if (warrantyMonthFilter !== 'all' && parts[1] !== warrantyMonthFilter.padStart(2, '0')) return false;
+        if (warrantyYearFilter !== 'all' && parts[2] !== warrantyYearFilter) return false;
+        return true;
+      });
+    }
+
+    // Step 4: Third level filter
+    if (thirdLevelYearFilter !== 'all') {
+      result = result.filter((insp) => {
+        if (!insp.third_level) return false;
+        const parts = insp.third_level.split('/');
+        if (parts.length !== 3) return false;
+        return parts[2] === thirdLevelYearFilter;
+      });
+    }
+
+    return result.sort((a, b) => parseInt(a.port) - parseInt(b.port));
+  }, [inspections, month, year, conformityFilter, subcategoryFilter, warrantyMonthFilter, warrantyYearFilter, thirdLevelYearFilter]);
 
   const contentAreaPerFirstPage = A4_HEIGHT - PAGE_PADDING_TOP - PAGE_PADDING_BOTTOM - HEADER_HEIGHT - INFO_BAR_HEIGHT - FOOTER_HEIGHT;
   const contentAreaPerExtraPage = A4_HEIGHT - PAGE_PADDING_TOP - PAGE_PADDING_BOTTOM - FOOTER_HEIGHT;
@@ -71,6 +124,11 @@ const PrintPage = () => {
   const handlePrint = () => { window.print(); };
 
   const showWatermark = !isSubscribed || showPromo;
+
+  const getStatusSymbol = (status: string) => {
+    if (status === '-') return '-';
+    return status === 'Conforme' ? '✓' : '✗';
+  };
 
   const thStyle: React.CSSProperties = {
     border: '2.5px solid #111', padding: '10px 8px', textAlign: 'center',
@@ -108,10 +166,10 @@ const PrintPage = () => {
           <td style={{ ...tdStyle, fontWeight: 'bold' }}>{insp.code}</td>
           <td style={tdStyle}>{insp.port}</td>
           <td style={tdStyle}>{insp.inspection_date}</td>
-          <td style={{ ...tdStyle, fontSize: '14px' }}>{insp.manometer_status === 'Conforme' ? '✓' : '✗'}</td>
-          <td style={{ ...tdStyle, fontSize: '14px' }}>{insp.seal_status === 'Conforme' ? '✓' : '✗'}</td>
-          <td style={{ ...tdStyle, fontSize: '14px' }}>{insp.plate_status === 'Conforme' ? '✓' : '✗'}</td>
-          <td style={{ ...tdStyle, fontSize: '14px' }}>{insp.floor_paint_status === 'Conforme' ? '✓' : '✗'}</td>
+          <td style={{ ...tdStyle, fontSize: '14px' }}>{getStatusSymbol(insp.manometer_status)}</td>
+          <td style={{ ...tdStyle, fontSize: '14px' }}>{getStatusSymbol(insp.seal_status)}</td>
+          <td style={{ ...tdStyle, fontSize: '14px' }}>{getStatusSymbol(insp.plate_status)}</td>
+          <td style={{ ...tdStyle, fontSize: '14px' }}>{getStatusSymbol(insp.floor_paint_status)}</td>
           <td style={tdStyle}>{displayWarranty(insp.warranty_expiry)}</td>
           <td style={tdStyle}>{displayThirdLevel(insp.third_level)}</td>
         </tr>

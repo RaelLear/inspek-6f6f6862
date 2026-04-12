@@ -6,7 +6,8 @@ import Numpad from './Numpad';
 import { Extinguisher, getTodayFormatted, formatDateInput, formatMonthYearInput, formatYearInput, monthYearToFullDate, yearToFullDate, daysUntil, displayWarranty, displayThirdLevel } from '@/lib/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Check, X, ArrowLeft, Ban, RefreshCw } from 'lucide-react';
+import { Check, X, ArrowLeft, Ban, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface InspectionDialogProps {
   open: boolean;
@@ -45,6 +46,8 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete, teamI
   const [dateEditValue, setDateEditValue] = useState('');
   const [isObstructed, setIsObstructed] = useState(false);
   const [isReserve, setIsReserve] = useState(false);
+  const [sendWarrantyToReview, setSendWarrantyToReview] = useState(false);
+  const [sendThirdToReview, setSendThirdToReview] = useState(false);
 
   const reset = () => {
     setStep('code');
@@ -62,6 +65,8 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete, teamI
     setDateEditValue('');
     setIsObstructed(false);
     setIsReserve(false);
+    setSendWarrantyToReview(false);
+    setSendThirdToReview(false);
   };
 
   const handleAttemptClose = () => {
@@ -76,15 +81,30 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete, teamI
 
   const handleBack = () => {
     if (step === 'port') { setStep('code'); setIsObstructed(false); }
-    else if (step === 'conformity') { setStep('port'); setIsReserve(false); }
+    else if (step === 'conformity') {
+      if (isReserve) { setStep('code'); setIsReserve(false); }
+      else setStep('port');
+    }
     else if (step === 'dates') setStep('conformity');
   };
 
   const handleCodeConfirm = () => {
     if (!code) return;
-    // If reserve, skip to conformity with only dates
     if (isReserve) {
-      setStep('port');
+      // Reserva skips port, go directly to conformity
+      const existing = extinguishers.find((e) => e.code === code);
+      if (existing) {
+        setPort(existing.port || '');
+        if (existing.warranty_expiry) {
+          const parts = existing.warranty_expiry.split('/');
+          if (parts.length === 3) setWarrantyExpiry(parts[1] + parts[2]);
+        }
+        if (existing.third_level) {
+          const parts = existing.third_level.split('/');
+          if (parts.length === 3) setThirdLevel(parts[2]);
+        }
+      }
+      setStep('conformity');
     } else {
       setStep('port');
     }
@@ -103,7 +123,6 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete, teamI
         if (parts.length === 3) setThirdLevel(parts[2]);
       }
     }
-    // If obstructed, skip conformity and go straight to submit
     if (isObstructed) {
       handleSubmitSpecialStatus('Obstruído');
       return;
@@ -112,15 +131,6 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete, teamI
   };
 
   const handleConformityNext = () => {
-    if (isReserve) {
-      // Reserve only needs conformity filled, then go to dates
-      if (!conformity.manometer || !conformity.seal || !conformity.plate || !conformity.floorPaint) {
-        toast.error('Preencha todos os campos de conformidade.');
-        return;
-      }
-      setStep('dates');
-      return;
-    }
     if (!conformity.manometer || !conformity.seal || !conformity.plate || !conformity.floorPaint) {
       toast.error('Preencha todos os campos de conformidade.');
       return;
@@ -155,14 +165,15 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete, teamI
         if (error) throw error;
       }
 
+      // Obstruído saves conformity as '-'
       const { error: inspError } = await supabase.from('inspections').insert({
         extinguisher_id: existing!.id,
         code, port,
         inspection_date: formattedDate,
-        manometer_status: 'Conforme',
-        seal_status: 'Conforme',
-        plate_status: 'Conforme',
-        floor_paint_status: 'Conforme',
+        manometer_status: '-',
+        seal_status: '-',
+        plate_status: '-',
+        floor_paint_status: '-',
         ...(teamId ? { team_id: teamId } : {}),
       });
       if (inspError) throw inspError;
@@ -190,28 +201,34 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete, teamI
       let existing = extinguishers.find((e) => e.code === code);
       const formattedDate = formatDisplay(inspectionDate);
       
-      const warrantyFormatted = monthYearToFullDate(formatMonthYearInput(warrantyExpiry));
+      const warrantyFormatted = sendWarrantyToReview ? '--' : monthYearToFullDate(formatMonthYearInput(warrantyExpiry));
       const thirdDigits = thirdLevel.replace(/\D/g, '');
       const fullThirdYear = thirdDigits.length <= 2 && thirdDigits.length > 0 ? '20' + thirdDigits.padStart(2, '0') : thirdDigits.slice(0, 4);
-      const thirdFormatted = '01/01/' + fullThirdYear;
+      const thirdFormatted = sendThirdToReview ? '--' : '01/01/' + fullThirdYear;
       
       const formattedManometerReview = manometerReviewDate ? formatDisplay(manometerReviewDate) : null;
       const formattedSealReview = sealReviewDate ? formatDisplay(sealReviewDate) : null;
 
-      const isInReview = conformity.manometer === 'Não Conforme' || conformity.seal === 'Não Conforme';
+      const isInReview = conformity.manometer === 'Não Conforme' || conformity.seal === 'Não Conforme' || sendWarrantyToReview || sendThirdToReview;
       const newStatus = isReserve ? 'Reserva' : isInReview ? 'Em Revisão' : 'Aprovado';
       const reviewSendDate = isInReview ? formattedDate : null;
 
-      // Handle port conflicts: remove extinguisher from old port
-      const existingOnPort = extinguishers.find((e) => e.port === port && e.code !== code);
-      if (existingOnPort) {
-        await supabase.from('extinguishers').update({ status: 'Vazio', port: '' }).eq('id', existingOnPort.id);
+      // Handle port conflicts
+      if (port) {
+        const existingOnPort = extinguishers.find((e) => e.port === port && e.code !== code);
+        if (existingOnPort) {
+          await supabase.from('extinguishers').update({ status: 'Vazio', port: '' }).eq('id', existingOnPort.id);
+        }
       }
+
+      // Save warranty/third for the inspection record (original values)
+      const inspWarranty = monthYearToFullDate(formatMonthYearInput(warrantyExpiry));
+      const inspThird = '01/01/' + fullThirdYear;
 
       if (!existing) {
         const { data, error } = await supabase.from('extinguishers').insert({
           code,
-          port: isInReview ? '' : port,
+          port: isInReview && !isReserve ? '' : (port || ''),
           status: newStatus,
           warranty_expiry: warrantyFormatted,
           third_level: thirdFormatted,
@@ -222,7 +239,7 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete, teamI
         existing = data as Extinguisher;
       } else {
         const updateData: any = {
-          port: isInReview ? '' : port,
+          port: isInReview && !isReserve ? '' : (port || existing.port),
           status: newStatus,
           warranty_expiry: warrantyFormatted,
           third_level: thirdFormatted,
@@ -235,7 +252,7 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete, teamI
       const { error: inspError } = await supabase.from('inspections').insert({
         extinguisher_id: existing!.id,
         code,
-        port,
+        port: port || existing?.port || '',
         inspection_date: formattedDate,
         manometer_status: conformity.manometer!,
         seal_status: conformity.seal!,
@@ -245,8 +262,8 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete, teamI
         floor_paint_description: floorPaintDesc || null,
         manometer_review_date: formattedManometerReview,
         seal_review_date: formattedSealReview,
-        warranty_expiry: warrantyFormatted,
-        third_level: thirdFormatted,
+        warranty_expiry: inspWarranty,
+        third_level: inspThird,
         ...(teamId ? { team_id: teamId } : {}),
       });
       if (inspError) throw inspError;
@@ -317,7 +334,6 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete, teamI
     return digits.slice(0, 4);
   };
 
-  // Check if existing extinguisher dates are expired/soon for colored text
   const existing = extinguishers.find((e) => e.code === code);
   const warrantyDays = existing ? daysUntil(existing.warranty_expiry) : null;
   const thirdDays = existing ? daysUntil(existing.third_level) : null;
@@ -328,6 +344,11 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete, teamI
     if (days <= 30) return 'text-status-review';
     return '';
   };
+
+  const isWarrantyWarning = warrantyDays !== null && warrantyDays <= 30 && warrantyDays > 0;
+  const isWarrantyUrgent = warrantyDays !== null && warrantyDays <= 0;
+  const isThirdWarning = thirdDays !== null && thirdDays <= 30 && thirdDays > 0;
+  const isThirdUrgent = thirdDays !== null && thirdDays <= 0;
 
   return (
     <>
@@ -348,13 +369,21 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete, teamI
 
           {step === 'code' && (
             <div className="space-y-4">
-              {/* Reserva button at top center */}
-              <div className="flex justify-center">
+              {/* Obstruído and Reserva buttons together at top center */}
+              <div className="flex justify-center gap-2">
+                <Button
+                  variant={isObstructed ? 'default' : 'outline'}
+                  size="sm"
+                  className={`gap-1 text-xs ${isObstructed ? 'bg-status-urgent text-white hover:bg-status-urgent/90' : 'border-status-urgent text-status-urgent hover:bg-status-urgent/10'}`}
+                  onClick={() => { setIsObstructed(!isObstructed); if (!isObstructed) setIsReserve(false); }}
+                >
+                  <Ban className="h-3 w-3" /> Obstruído
+                </Button>
                 <Button
                   variant={isReserve ? 'default' : 'outline'}
                   size="sm"
                   className={`gap-1 text-xs ${isReserve ? 'bg-status-review text-white hover:bg-status-review/90' : 'border-status-review text-status-review hover:bg-status-review/10'}`}
-                  onClick={() => setIsReserve(!isReserve)}
+                  onClick={() => { setIsReserve(!isReserve); if (!isReserve) setIsObstructed(false); }}
                 >
                   <RefreshCw className="h-3 w-3" /> Reserva
                 </Button>
@@ -365,17 +394,6 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete, teamI
 
           {step === 'port' && (
             <div className="space-y-4">
-              {/* Obstruído button at top center */}
-              <div className="flex justify-center">
-                <Button
-                  variant={isObstructed ? 'default' : 'outline'}
-                  size="sm"
-                  className={`gap-1 text-xs ${isObstructed ? 'bg-status-urgent text-white hover:bg-status-urgent/90' : 'border-status-urgent text-status-urgent hover:bg-status-urgent/10'}`}
-                  onClick={() => setIsObstructed(!isObstructed)}
-                >
-                  <Ban className="h-3 w-3" /> Obstruído
-                </Button>
-              </div>
               <Numpad value={port} onChange={setPort} onConfirm={handlePortConfirm} maxDigits={2} label="Digite o posto (2 dígitos)" />
             </div>
           )}
@@ -383,7 +401,7 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete, teamI
           {step === 'conformity' && !dateEditField && (
             <div className="space-y-4">
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Extintor: {code} | Posto: {port}</p>
+                <p className="text-xs text-muted-foreground">Extintor: {code} {port ? `| Posto: ${port}` : ''}</p>
               </div>
 
               {isReserve && (
@@ -494,7 +512,7 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete, teamI
           {step === 'dates' && !dateEditField && (
             <div className="space-y-4">
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Extintor: {code} | Posto: {port}</p>
+                <p className="text-xs text-muted-foreground">Extintor: {code} {port ? `| Posto: ${port}` : ''}</p>
               </div>
 
               <div className="cursor-pointer rounded-lg p-3 bg-foreground text-background hover:bg-foreground/90" onClick={() => { setDateEditField('inspection'); setDateEditValue(inspectionDate); }}>
@@ -502,19 +520,47 @@ const InspectionDialog = ({ open, onOpenChange, extinguishers, onComplete, teamI
                 <p className="text-lg font-bold">{formatDisplay(inspectionDate)}</p>
               </div>
 
-              <div className="cursor-pointer rounded-lg border p-3 hover:bg-muted/50" onClick={() => { setDateEditField('warranty'); setDateEditValue(warrantyExpiry); }}>
+              <div className="cursor-pointer rounded-lg border p-3 hover:bg-muted/50" onClick={() => { if (!sendWarrantyToReview) { setDateEditField('warranty'); setDateEditValue(warrantyExpiry); } }}>
                 <p className="text-xs text-muted-foreground">Vencimento Garantia *</p>
-                <p className={`text-lg font-bold ${getDateColor(warrantyDays)}`}>
-                  {getWarrantyDisplay()}
+                <p className={`text-lg font-bold ${sendWarrantyToReview ? 'text-muted-foreground' : getDateColor(warrantyDays)}`}>
+                  {sendWarrantyToReview ? '--' : getWarrantyDisplay()}
                 </p>
               </div>
+              {(isWarrantyWarning || isWarrantyUrgent) && (
+                <div className={`rounded-lg border p-3 flex items-center gap-3 ${isWarrantyUrgent ? 'border-status-urgent/30 bg-status-urgent/5' : 'border-status-review/30 bg-status-review/5'}`}>
+                  <AlertTriangle className={`h-4 w-4 shrink-0 ${isWarrantyUrgent ? 'text-status-urgent' : 'text-status-review'}`} />
+                  <div className="flex-1">
+                    <p className={`text-sm font-bold ${isWarrantyUrgent ? 'text-status-urgent' : 'text-status-review'}`}>
+                      {isWarrantyUrgent ? 'Enviar para a revisão!' : 'Enviar para revisão?'}
+                    </p>
+                  </div>
+                  <Checkbox
+                    checked={sendWarrantyToReview}
+                    onCheckedChange={(v) => setSendWarrantyToReview(!!v)}
+                  />
+                </div>
+              )}
 
-              <div className="cursor-pointer rounded-lg border p-3 hover:bg-muted/50" onClick={() => { setDateEditField('third'); setDateEditValue(thirdLevel); }}>
+              <div className="cursor-pointer rounded-lg border p-3 hover:bg-muted/50" onClick={() => { if (!sendThirdToReview) { setDateEditField('third'); setDateEditValue(thirdLevel); } }}>
                 <p className="text-xs text-muted-foreground">3º Nível *</p>
-                <p className={`text-lg font-bold ${getDateColor(thirdDays)}`}>
-                  {getThirdLevelDisplay()}
+                <p className={`text-lg font-bold ${sendThirdToReview ? 'text-muted-foreground' : getDateColor(thirdDays)}`}>
+                  {sendThirdToReview ? '--' : getThirdLevelDisplay()}
                 </p>
               </div>
+              {(isThirdWarning || isThirdUrgent) && (
+                <div className={`rounded-lg border p-3 flex items-center gap-3 ${isThirdUrgent ? 'border-status-urgent/30 bg-status-urgent/5' : 'border-status-review/30 bg-status-review/5'}`}>
+                  <AlertTriangle className={`h-4 w-4 shrink-0 ${isThirdUrgent ? 'text-status-urgent' : 'text-status-review'}`} />
+                  <div className="flex-1">
+                    <p className={`text-sm font-bold ${isThirdUrgent ? 'text-status-urgent' : 'text-status-review'}`}>
+                      {isThirdUrgent ? 'Enviar para a revisão!' : 'Enviar para revisão?'}
+                    </p>
+                  </div>
+                  <Checkbox
+                    checked={sendThirdToReview}
+                    onCheckedChange={(v) => setSendThirdToReview(!!v)}
+                  />
+                </div>
+              )}
 
               <Button className="w-full h-12 text-lg font-bold" onClick={handleSubmit} disabled={submitting}>
                 {submitting ? 'Salvando...' : 'Registrar Inspeção'}

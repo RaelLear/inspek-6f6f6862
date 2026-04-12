@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Inspection, displayWarranty, displayThirdLevel } from '@/lib/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Printer, Check, X, Trash2 } from 'lucide-react';
+import { Printer, Check, X, Trash2, Minus } from 'lucide-react';
 import DelayedConfirmDialog from './DelayedConfirmDialog';
 import { useNavigate } from 'react-router-dom';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -48,11 +48,6 @@ const SpreadsheetDialog = ({ open, onOpenChange, inspections, onRefresh }: Props
   const getPortDescription = (portNumber: string) => {
     const p = ports.find(pt => pt.number === portNumber);
     return p?.description || null;
-  };
-
-  const isPortInactive = (portNumber: string) => {
-    const p = ports.find(pt => pt.number === portNumber);
-    return p?.description?.includes('[INATIVO]') || false;
   };
 
   const inactivePorts = useMemo(() => {
@@ -157,15 +152,26 @@ const SpreadsheetDialog = ({ open, onOpenChange, inspections, onRefresh }: Props
 
   const handlePrintConfirm = () => {
     setShowPrintPopup(false);
-    navigate(`/print?month=${selectedMonth}&year=${selectedYear}`);
+    // Pass all active filters to print page
+    const params = new URLSearchParams({
+      month: selectedMonth,
+      year: selectedYear,
+    });
+    if (conformityFilter !== 'all') params.set('conformity', conformityFilter);
+    if (subcategoryFilter !== 'all') params.set('subcategory', subcategoryFilter);
+    if (warrantyMonthFilter !== 'all') params.set('warrantyMonth', warrantyMonthFilter);
+    if (warrantyYearFilter !== 'all') params.set('warrantyYear', warrantyYearFilter);
+    if (thirdLevelYearFilter !== 'all') params.set('thirdLevelYear', thirdLevelYearFilter);
+    navigate(`/print?${params.toString()}`);
     onOpenChange(false);
   };
 
-  const StatusIcon = ({ status }: { status: string }) => (
-    status === 'Conforme'
+  const StatusIcon = ({ status }: { status: string }) => {
+    if (status === '-') return <Minus className="h-4 w-4 text-muted-foreground mx-auto" />;
+    return status === 'Conforme'
       ? <Check className="h-4 w-4 text-status-approved mx-auto" />
-      : <X className="h-4 w-4 text-status-urgent mx-auto" />
-  );
+      : <X className="h-4 w-4 text-status-urgent mx-auto" />;
+  };
 
   return (
     <>
