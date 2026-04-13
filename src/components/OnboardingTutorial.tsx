@@ -24,7 +24,7 @@ const STEPS: TutorialStep[] = [
   },
   {
     title: 'Código de referência do extintor',
-    content: 'Aqui você pode registrar um código de referência para cada extintor inspecionado. Isso ajuda a identificar cada unidade individualmente.\n\nRecomendamos utilizar os 3 últimos dígitos do número de série do cilindro, que geralmente está gravado na lataria do extintor.',
+    content: 'Aqui você pode registrar um código de referência para cada extintor inspecionado. Isso ajuda a identificar cada unidade individualmente.\n\nRecomendamos utilizar os 3 últimos dígitos do número de série do extintor. Caso não haja, utilize o código do cilindro gravado na lataria do extintor como referência.',
     mockUI: 'code',
     image: '/tutorial-etiqueta.png',
   },
@@ -66,6 +66,7 @@ const STEPS: TutorialStep[] = [
   {
     title: 'Informação importante',
     content: 'Em muitos casos, empresas terceirizadas devolvem extintores diferentes dos que foram enviados para revisão.\n\nPor esse motivo, quando um extintor é marcado como enviado para revisão, o aplicativo remove o registro da unidade após a confirmação da troca.\n\nAssim, na próxima inspeção você irá registrar os novos extintores recebidos, garantindo um controle correto da identificação e rastreabilidade dos equipamentos.',
+    contact: true,
   },
 ];
 

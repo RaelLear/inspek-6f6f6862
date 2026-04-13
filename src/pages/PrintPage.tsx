@@ -224,7 +224,7 @@ const PrintPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="no-print flex items-center gap-3 p-4 border-b">
+      <div className="no-print flex items-center gap-2 px-3 py-1.5 border-b">
         <Button variant="ghost" onClick={() => navigate('/extintores')}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
         </Button>
