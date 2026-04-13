@@ -9,6 +9,7 @@ interface TutorialStep {
   highlightSelector?: string;
   requireClick?: boolean;
   mockUI?: 'code' | 'port' | 'conformity' | 'dates';
+  contact?: boolean;
 }
 
 const STEPS: TutorialStep[] = [
@@ -314,6 +315,17 @@ const OnboardingTutorial = ({ onComplete }: Props) => {
 
         {step.image && (
           <img src={step.image} alt="" className="w-full rounded-lg border max-h-40 object-contain" />
+        )}
+
+        {step.contact && (
+          <a
+            href="https://wa.me/5531999647782"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full rounded-lg border border-status-approved/30 bg-status-approved/10 py-2.5 text-center text-sm font-bold text-status-approved"
+          >
+            Dúvidas? Converse comigo!
+          </a>
         )}
 
         <div className="flex gap-2 justify-between">
