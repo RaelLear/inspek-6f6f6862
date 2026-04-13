@@ -213,31 +213,31 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       {showTutorial && <OnboardingTutorial onComplete={() => setShowTutorial(false)} />}
 
-      {/* Header - thinner */}
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b bg-background/95 backdrop-blur px-4 h-10">
+      {/* Header - responsive height */}
+      <header className="sticky top-0 z-40 flex items-center justify-between border-b bg-background/95 backdrop-blur px-4 h-10 md:h-10 h-12">
         <div className="flex items-center gap-1">
-          <img src="/logo-site.png" alt="inSpek" className="h-5 w-5 object-contain" />
-          <span className="text-base font-black tracking-tight">inSpek</span>
+          <img src="/logo-site.png" alt="inSpek" className="h-5 w-5 object-contain md:h-5 md:w-5 h-6 w-6" />
+          <span className="text-base font-black tracking-tight md:text-base text-lg">inSpek</span>
           {!isPersonal && (
-            <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">
+            <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground hidden sm:inline-flex">
               {currentTeamName}
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleTheme}>
+        <div className="flex items-center gap-1 h-full">
+          <Button variant="ghost" size="icon" className="h-full w-8 md:w-8 w-10" onClick={toggleTheme}>
             {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
           {!isInstalled && deferredPrompt && (
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleInstall}>
+            <Button variant="ghost" size="icon" className="h-full w-8 md:w-8 w-10" onClick={handleInstall}>
               <Download className="h-4 w-4" />
             </Button>
           )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 relative">
+              <Button variant="ghost" size="icon" className="h-full w-8 md:w-8 w-10 relative">
                 <Menu className="h-5 w-5" />
                 {statusColor === 'red' && (
                   <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-destructive" />
