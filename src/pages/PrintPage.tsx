@@ -102,6 +102,14 @@ const PrintPage = () => {
     return result.sort((a, b) => parseInt(a.port) - parseInt(b.port));
   }, [inspections, month, year, conformityFilter, subcategoryFilter, warrantyMonthFilter, warrantyYearFilter, thirdLevelYearFilter]);
 
+  // Descriptions block - inspections that have optional descriptions
+  const descriptionsData = useMemo(() => {
+    return filtered.filter(insp => 
+      (insp.plate_description && insp.plate_description.trim()) || 
+      (insp.floor_paint_description && insp.floor_paint_description.trim())
+    );
+  }, [filtered]);
+
   const contentAreaPerFirstPage = A4_HEIGHT - PAGE_PADDING_TOP - PAGE_PADDING_BOTTOM - HEADER_HEIGHT - INFO_BAR_HEIGHT - FOOTER_HEIGHT;
   const contentAreaPerExtraPage = A4_HEIGHT - PAGE_PADDING_TOP - PAGE_PADDING_BOTTOM - FOOTER_HEIGHT;
   const rowsFirstPage = Math.floor((contentAreaPerFirstPage - HEADER_ROW_HEIGHT) / ROW_HEIGHT);
@@ -112,6 +120,9 @@ const PrintPage = () => {
   if (totalRows > rowsFirstPage) {
     totalPages = 1 + Math.ceil((totalRows - rowsFirstPage) / rowsPerExtraPage);
   }
+  // Add extra page for descriptions if any
+  const hasDescriptions = descriptionsData.length > 0;
+  const totalPagesWithDescriptions = hasDescriptions ? totalPages + 1 : totalPages;
 
   const getPageRows = (pageIndex: number) => {
     if (pageIndex === 0) return filtered.slice(0, rowsFirstPage);
@@ -119,7 +130,7 @@ const PrintPage = () => {
     return filtered.slice(start, start + rowsPerExtraPage);
   };
 
-  const isLastPage = (pageIndex: number) => pageIndex === totalPages - 1;
+  const isLastPage = (pageIndex: number) => pageIndex === totalPagesWithDescriptions - 1;
 
   const handlePrint = () => { window.print(); };
 
