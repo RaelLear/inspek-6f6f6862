@@ -260,24 +260,56 @@ const PrintPage = () => {
             <SignatureFooter />
           </div>
         ) : (
-          Array.from({ length: totalPages }).map((_, pageIndex) => {
-            const rows = getPageRows(pageIndex);
-            return (
-              <div key={pageIndex} className="print-page bg-white text-black" style={pageStyle}>
-                {pageIndex === 0 && <PageHeader />}
-                {pageIndex > 0 && (
-                  <div style={{ fontSize: '10px', color: '#999', marginBottom: '12px', textAlign: 'right' }}>
-                    Página {pageIndex + 1} de {totalPages}
-                  </div>
-                )}
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
-                  <TableHeader />
-                  <TableRows rows={rows} />
-                </table>
-                {isLastPage(pageIndex) && <SignatureFooter />}
+          <>
+            {Array.from({ length: totalPages }).map((_, pageIndex) => {
+              const rows = getPageRows(pageIndex);
+              return (
+                <div key={pageIndex} className="print-page bg-white text-black" style={pageStyle}>
+                  {pageIndex === 0 && <PageHeader />}
+                  {pageIndex > 0 && (
+                    <div style={{ fontSize: '10px', color: '#999', marginBottom: '12px', textAlign: 'right' }}>
+                      Página {pageIndex + 1} de {totalPagesWithDescriptions}
+                    </div>
+                  )}
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+                    <TableHeader />
+                    <TableRows rows={rows} />
+                  </table>
+                  {!hasDescriptions && isLastPage(pageIndex) && <SignatureFooter />}
+                </div>
+              );
+            })}
+            {hasDescriptions && (
+              <div className="print-page bg-white text-black" style={pageStyle}>
+                <div style={{ fontSize: '10px', color: '#999', marginBottom: '12px', textAlign: 'right' }}>
+                  Página {totalPages + 1} de {totalPagesWithDescriptions}
+                </div>
+                <h2 style={{ fontSize: '16px', fontWeight: 900, marginBottom: '16px', borderBottom: '2px solid #000', paddingBottom: '8px', color: '#000' }}>
+                  Observações das Inspeções
+                </h2>
+                <div style={{ fontSize: '12px', color: '#000' }}>
+                  {descriptionsData.map((insp) => (
+                    <div key={insp.id} style={{ marginBottom: '12px', borderBottom: '1px solid #ddd', paddingBottom: '8px' }}>
+                      <div style={{ fontWeight: 900, fontSize: '13px', marginBottom: '4px' }}>
+                        {insp.code} — Posto {insp.port}
+                      </div>
+                      {insp.plate_description && insp.plate_description.trim() && (
+                        <div style={{ marginBottom: '2px' }}>
+                          <strong>Placa:</strong> {insp.plate_description}
+                        </div>
+                      )}
+                      {insp.floor_paint_description && insp.floor_paint_description.trim() && (
+                        <div>
+                          <strong>Pintura do Piso:</strong> {insp.floor_paint_description}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <SignatureFooter />
               </div>
-            );
-          })
+            )}
+          </>
         )}
       </div>
 
