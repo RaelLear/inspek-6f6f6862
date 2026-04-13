@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { ClipboardList, List, Table, BarChart3, Sun, Moon, LogOut, Download, Menu, Settings, Users, Plus, CreditCard, Building, RotateCcw, Cog } from 'lucide-react';
+import { ClipboardList, List, Table, BarChart3, Sun, Moon, LogOut, Download, Menu, Settings, Users, Plus, CreditCard, Building, RotateCcw, Cog, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -299,6 +299,9 @@ const Dashboard = () => {
 
               <DropdownMenuItem className="gap-2" onClick={() => setShowSettings(true)}>
                 <Settings className="h-4 w-4" /> Configurações
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-2" onClick={() => window.open('https://wa.me/5531999647782', '_blank')}>
+                <MessageCircle className="h-4 w-4" /> Suporte
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="gap-2 text-destructive" onClick={logout}>
