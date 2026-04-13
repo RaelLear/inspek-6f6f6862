@@ -81,7 +81,7 @@ const MetricsDialog = ({ open, onOpenChange, inspections }: Props) => {
             <p className="text-xs text-muted-foreground">
               Somente não conformidades de <strong>Manômetro</strong> e <strong>Lacre</strong> são contabilizadas como revisões. 
               Vencimento de <strong>Garantia</strong> e <strong>3º Nível</strong> são considerados revisão periódica obrigatória 
-              e não entram como métrica de comparação.
+              e não entram como métrica de comparação. Revisões antigas podem ser perdidas nas métricas.
             </p>
           </div>
         </div>

@@ -107,7 +107,7 @@ const StatusDetailDialog = ({ open, onOpenChange, extinguishers, filter, onRefre
                     </div>
                     <div className="flex items-center gap-1">
                       <span className={`text-xs font-bold ${getStatusColor(ext.status)}`}>{ext.status}</span>
-                      {filter === 'Obstruídos' && (
+                      {(filter === 'Obstruídos' || filter === 'Em Revisão') && (
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setApproveId(ext.id)}>
                           <CheckCircle className="h-4 w-4 text-status-approved" />
                         </Button>

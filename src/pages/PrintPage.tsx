@@ -102,6 +102,14 @@ const PrintPage = () => {
     return result.sort((a, b) => parseInt(a.port) - parseInt(b.port));
   }, [inspections, month, year, conformityFilter, subcategoryFilter, warrantyMonthFilter, warrantyYearFilter, thirdLevelYearFilter]);
 
+  // Descriptions block - inspections that have optional descriptions
+  const descriptionsData = useMemo(() => {
+    return filtered.filter(insp => 
+      (insp.plate_description && insp.plate_description.trim()) || 
+      (insp.floor_paint_description && insp.floor_paint_description.trim())
+    );
+  }, [filtered]);
+
   const contentAreaPerFirstPage = A4_HEIGHT - PAGE_PADDING_TOP - PAGE_PADDING_BOTTOM - HEADER_HEIGHT - INFO_BAR_HEIGHT - FOOTER_HEIGHT;
   const contentAreaPerExtraPage = A4_HEIGHT - PAGE_PADDING_TOP - PAGE_PADDING_BOTTOM - FOOTER_HEIGHT;
   const rowsFirstPage = Math.floor((contentAreaPerFirstPage - HEADER_ROW_HEIGHT) / ROW_HEIGHT);
@@ -112,6 +120,9 @@ const PrintPage = () => {
   if (totalRows > rowsFirstPage) {
     totalPages = 1 + Math.ceil((totalRows - rowsFirstPage) / rowsPerExtraPage);
   }
+  // Add extra page for descriptions if any
+  const hasDescriptions = descriptionsData.length > 0;
+  const totalPagesWithDescriptions = hasDescriptions ? totalPages + 1 : totalPages;
 
   const getPageRows = (pageIndex: number) => {
     if (pageIndex === 0) return filtered.slice(0, rowsFirstPage);
@@ -119,7 +130,7 @@ const PrintPage = () => {
     return filtered.slice(start, start + rowsPerExtraPage);
   };
 
-  const isLastPage = (pageIndex: number) => pageIndex === totalPages - 1;
+  const isLastPage = (pageIndex: number) => pageIndex === totalPagesWithDescriptions - 1;
 
   const handlePrint = () => { window.print(); };
 
@@ -224,7 +235,7 @@ const PrintPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="no-print flex items-center gap-3 p-4 border-b">
+      <div className="no-print flex items-center gap-2 px-3 py-1.5 border-b">
         <Button variant="ghost" onClick={() => navigate('/extintores')}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
         </Button>
@@ -249,24 +260,56 @@ const PrintPage = () => {
             <SignatureFooter />
           </div>
         ) : (
-          Array.from({ length: totalPages }).map((_, pageIndex) => {
-            const rows = getPageRows(pageIndex);
-            return (
-              <div key={pageIndex} className="print-page bg-white text-black" style={pageStyle}>
-                {pageIndex === 0 && <PageHeader />}
-                {pageIndex > 0 && (
-                  <div style={{ fontSize: '10px', color: '#999', marginBottom: '12px', textAlign: 'right' }}>
-                    Página {pageIndex + 1} de {totalPages}
-                  </div>
-                )}
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
-                  <TableHeader />
-                  <TableRows rows={rows} />
-                </table>
-                {isLastPage(pageIndex) && <SignatureFooter />}
+          <>
+            {Array.from({ length: totalPages }).map((_, pageIndex) => {
+              const rows = getPageRows(pageIndex);
+              return (
+                <div key={pageIndex} className="print-page bg-white text-black" style={pageStyle}>
+                  {pageIndex === 0 && <PageHeader />}
+                  {pageIndex > 0 && (
+                    <div style={{ fontSize: '10px', color: '#999', marginBottom: '12px', textAlign: 'right' }}>
+                      Página {pageIndex + 1} de {totalPagesWithDescriptions}
+                    </div>
+                  )}
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+                    <TableHeader />
+                    <TableRows rows={rows} />
+                  </table>
+                  {!hasDescriptions && isLastPage(pageIndex) && <SignatureFooter />}
+                </div>
+              );
+            })}
+            {hasDescriptions && (
+              <div className="print-page bg-white text-black" style={pageStyle}>
+                <div style={{ fontSize: '10px', color: '#999', marginBottom: '12px', textAlign: 'right' }}>
+                  Página {totalPages + 1} de {totalPagesWithDescriptions}
+                </div>
+                <h2 style={{ fontSize: '16px', fontWeight: 900, marginBottom: '16px', borderBottom: '2px solid #000', paddingBottom: '8px', color: '#000' }}>
+                  Observações das Inspeções
+                </h2>
+                <div style={{ fontSize: '12px', color: '#000' }}>
+                  {descriptionsData.map((insp) => (
+                    <div key={insp.id} style={{ marginBottom: '12px', borderBottom: '1px solid #ddd', paddingBottom: '8px' }}>
+                      <div style={{ fontWeight: 900, fontSize: '13px', marginBottom: '4px' }}>
+                        {insp.code} — Posto {insp.port}
+                      </div>
+                      {insp.plate_description && insp.plate_description.trim() && (
+                        <div style={{ marginBottom: '2px' }}>
+                          <strong>Placa:</strong> {insp.plate_description}
+                        </div>
+                      )}
+                      {insp.floor_paint_description && insp.floor_paint_description.trim() && (
+                        <div>
+                          <strong>Pintura do Piso:</strong> {insp.floor_paint_description}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <SignatureFooter />
               </div>
-            );
-          })
+            )}
+          </>
         )}
       </div>
 

@@ -9,6 +9,7 @@ interface TutorialStep {
   highlightSelector?: string;
   requireClick?: boolean;
   mockUI?: 'code' | 'port' | 'conformity' | 'dates';
+  contact?: boolean;
 }
 
 const STEPS: TutorialStep[] = [
@@ -24,7 +25,7 @@ const STEPS: TutorialStep[] = [
   },
   {
     title: 'Código de referência do extintor',
-    content: 'Aqui você pode registrar um código de referência para cada extintor inspecionado. Isso ajuda a identificar cada unidade individualmente.\n\nRecomendamos utilizar os 3 últimos dígitos do número de série do cilindro, que geralmente está gravado na lataria do extintor.',
+    content: 'Aqui você pode registrar um código de referência para cada extintor inspecionado. Isso ajuda a identificar cada unidade individualmente.\n\nRecomendamos utilizar os 3 últimos dígitos do número de série do extintor. Caso não haja, utilize o código do cilindro gravado na lataria do extintor como referência.',
     mockUI: 'code',
     image: '/tutorial-etiqueta.png',
   },
@@ -66,6 +67,7 @@ const STEPS: TutorialStep[] = [
   {
     title: 'Informação importante',
     content: 'Em muitos casos, empresas terceirizadas devolvem extintores diferentes dos que foram enviados para revisão.\n\nPor esse motivo, quando um extintor é marcado como enviado para revisão, o aplicativo remove o registro da unidade após a confirmação da troca.\n\nAssim, na próxima inspeção você irá registrar os novos extintores recebidos, garantindo um controle correto da identificação e rastreabilidade dos equipamentos.',
+    contact: true,
   },
 ];
 
@@ -313,6 +315,17 @@ const OnboardingTutorial = ({ onComplete }: Props) => {
 
         {step.image && (
           <img src={step.image} alt="" className="w-full rounded-lg border max-h-40 object-contain" />
+        )}
+
+        {step.contact && (
+          <a
+            href="https://wa.me/5531999647782"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full rounded-lg border border-status-approved/30 bg-status-approved/10 py-2.5 text-center text-sm font-bold text-status-approved"
+          >
+            Dúvidas? Converse comigo!
+          </a>
         )}
 
         <div className="flex gap-2 justify-between">
