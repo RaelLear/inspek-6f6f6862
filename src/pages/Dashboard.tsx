@@ -214,10 +214,10 @@ const Dashboard = () => {
       {showTutorial && <OnboardingTutorial onComplete={() => setShowTutorial(false)} />}
 
       {/* Header - responsive height */}
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b bg-background/95 backdrop-blur px-4 h-10 md:h-10 h-12">
+      <header className="sticky top-0 z-40 flex items-center justify-between border-b bg-background/95 backdrop-blur px-4 h-12 md:h-10">
         <div className="flex items-center gap-1">
-          <img src="/logo-site.png" alt="inSpek" className="h-5 w-5 object-contain md:h-5 md:w-5 h-6 w-6" />
-          <span className="text-base font-black tracking-tight md:text-base text-lg">inSpek</span>
+          <img src="/logo-site.png" alt="inSpek" className="h-5 w-5 object-contain" />
+          <span className="text-base font-black tracking-tight">inSpek</span>
           {!isPersonal && (
             <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground hidden sm:inline-flex">
               {currentTeamName}
