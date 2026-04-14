@@ -175,13 +175,41 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh, tea
       toast.error('Descrição obrigatória para motivo "Outro".');
       return;
     }
-    if (!reviewId) return;
+    if (!reviewId || !user) return;
     try {
+      const today = getTodayFormatted();
       const { error } = await supabase.from('extinguishers').update({
         status: 'Em Revisão',
-        review_send_date: getTodayFormatted(),
+        review_send_date: today,
       }).eq('id', reviewId);
       if (error) throw error;
+
+      // Increment monthly review count
+      const todayParts = today.split('/');
+      const month = parseInt(todayParts[1]);
+      const year = parseInt(todayParts[2]);
+
+      let query = (supabase.from as any)('monthly_review_counts')
+        .select('*')
+        .eq('month', month)
+        .eq('year', year)
+        .eq('user_id', user.id);
+      if (teamId) {
+        query = query.eq('team_id', teamId);
+      } else {
+        query = query.is('team_id', null);
+      }
+      const { data: existing } = await query.maybeSingle();
+
+      if (existing) {
+        await (supabase.from as any)('monthly_review_counts')
+          .update({ count: (existing.count || 0) + 1, updated_at: new Date().toISOString() })
+          .eq('id', existing.id);
+      } else {
+        await (supabase.from as any)('monthly_review_counts')
+          .insert({ month, year, count: 1, ...(teamId ? { team_id: teamId } : {}) });
+      }
+
       toast.success('Extintor enviado para revisão!');
       setReviewId(null);
       setReviewReason('Utilizado');
