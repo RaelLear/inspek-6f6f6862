@@ -30,6 +30,7 @@ interface Props {
 type Mode = 'list' | 'add' | 'edit' | 'numpad' | 'addPort';
 
 const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh, teamId }: Props) => {
+  const { user } = useAuth();
   const [mode, setMode] = useState<Mode>('list');
   const [editId, setEditId] = useState<string | null>(null);
   const [code, setCode] = useState('');
