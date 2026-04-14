@@ -488,6 +488,39 @@ export type Database = {
           },
         ]
       }
+      monthly_review_counts: {
+        Row: {
+          count: number
+          created_at: string
+          id: string
+          month: number
+          team_id: string | null
+          updated_at: string
+          user_id: string | null
+          year: number
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          id?: string
+          month: number
+          team_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+          year: number
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          id?: string
+          month?: number
+          team_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+          year?: number
+        }
+        Relationships: []
+      }
       ports: {
         Row: {
           created_at: string
@@ -530,6 +563,7 @@ export type Database = {
         Row: {
           created_at: string
           display_name: string | null
+          email: string | null
           id: string
           terms_accepted: boolean
           terms_accepted_at: string | null
@@ -538,6 +572,7 @@ export type Database = {
         Insert: {
           created_at?: string
           display_name?: string | null
+          email?: string | null
           id: string
           terms_accepted?: boolean
           terms_accepted_at?: string | null
@@ -546,6 +581,7 @@ export type Database = {
         Update: {
           created_at?: string
           display_name?: string | null
+          email?: string | null
           id?: string
           terms_accepted?: boolean
           terms_accepted_at?: string | null

@@ -21,7 +21,7 @@ export const useSubscription = () => {
   useEffect(() => {
     if (!user) { setLoading(false); return; }
     const fetchSub = async () => {
-      const { data } = await (supabase.from as any)('subscriptions').select('*').eq('user_id', user.id).single();
+      const { data } = await (supabase.from as any)('subscriptions').select('*').eq('user_id', user.id).maybeSingle();
       setSubscription(data as Subscription | null);
       setLoading(false);
     };
@@ -55,7 +55,7 @@ export const useSubscription = () => {
 
   const getStatusLabel = (): string => {
     if (loading) return 'Carregando...';
-    if (!subscription) return 'Teste Grátis (90 dias)';
+    if (!subscription) return 'Teste Grátis';
     if (isPermanent) return 'Acesso Permanente';
     if (isPaid) return 'Assinatura Ativa';
     if (isTrial && trialDaysLeft !== null) {

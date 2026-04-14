@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Extinguisher, daysUntil, formatDateInput, formatMonthYearInput, formatYearInput, monthYearToFullDate, yearToFullDate, displayWarranty, displayThirdLevel, getTodayFormatted } from '@/lib/types';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import Numpad from './Numpad';
@@ -29,6 +30,7 @@ interface Props {
 type Mode = 'list' | 'add' | 'edit' | 'numpad' | 'addPort';
 
 const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh, teamId }: Props) => {
+  const { user } = useAuth();
   const [mode, setMode] = useState<Mode>('list');
   const [editId, setEditId] = useState<string | null>(null);
   const [code, setCode] = useState('');
@@ -173,13 +175,41 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh, tea
       toast.error('Descrição obrigatória para motivo "Outro".');
       return;
     }
-    if (!reviewId) return;
+    if (!reviewId || !user) return;
     try {
+      const today = getTodayFormatted();
       const { error } = await supabase.from('extinguishers').update({
         status: 'Em Revisão',
-        review_send_date: getTodayFormatted(),
+        review_send_date: today,
       }).eq('id', reviewId);
       if (error) throw error;
+
+      // Increment monthly review count
+      const todayParts = today.split('/');
+      const month = parseInt(todayParts[1]);
+      const year = parseInt(todayParts[2]);
+
+      let query = (supabase.from as any)('monthly_review_counts')
+        .select('*')
+        .eq('month', month)
+        .eq('year', year)
+        .eq('user_id', user.id);
+      if (teamId) {
+        query = query.eq('team_id', teamId);
+      } else {
+        query = query.is('team_id', null);
+      }
+      const { data: existing } = await query.maybeSingle();
+
+      if (existing) {
+        await (supabase.from as any)('monthly_review_counts')
+          .update({ count: (existing.count || 0) + 1, updated_at: new Date().toISOString() })
+          .eq('id', existing.id);
+      } else {
+        await (supabase.from as any)('monthly_review_counts')
+          .insert({ month, year, count: 1, ...(teamId ? { team_id: teamId } : {}) });
+      }
+
       toast.success('Extintor enviado para revisão!');
       setReviewId(null);
       setReviewReason('Utilizado');
@@ -402,82 +432,107 @@ const ExtinguisherManager = ({ open, onOpenChange, extinguishers, onRefresh, tea
                 </Button>
               </div>
 
-              {emptyPorts.length > 0 && (
-                <div className="rounded-xl border border-dashed border-muted-foreground/30 p-3 space-y-2">
-                  <p className="text-xs font-bold text-muted-foreground">Postos Vazios</p>
-                  <div className="flex flex-wrap gap-2">
-                    {emptyPorts.map((p) => (
-                      <Popover key={p.id}>
-                        <PopoverTrigger asChild>
-                          <button className="px-3 py-1.5 rounded-lg bg-background text-foreground border border-border text-sm font-bold hover:bg-muted/50 transition-colors flex items-center gap-1.5">
-                            <MapPin className="h-3 w-3" />
-                            {p.number}
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-60 text-sm">
-                          <p className="font-bold text-xs mb-1">Posto {p.number}</p>
-                          <p className="text-muted-foreground text-xs">{p.description || 'Sem descrição'}</p>
-                        </PopoverContent>
-                      </Popover>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               <div className="space-y-2">
-                {sortedExtinguishers.map((ext) => {
-                  const alerts = getExpiryStatus(ext);
-                  const wDays = daysUntil(ext.warranty_expiry);
-                  const tDays = daysUntil(ext.third_level);
-                  return (
-                    <div key={ext.id} className="rounded-xl border p-3 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {/* Posto is highlighted, extintor code is secondary */}
-                          <span className="font-black text-lg">Posto {ext.port || '-'}</span>
-                          <PortDescriptionBadge portNumber={ext.port} />
-                          <span className="text-muted-foreground text-sm">Ext. {ext.code}</span>
+                {(() => {
+                  // Build combined list: extinguishers + empty ports as "Vazio"
+                  type ListItem = { type: 'ext'; ext: Extinguisher } | { type: 'empty'; port: Port };
+                  const items: ListItem[] = [];
+
+                  // Add all extinguishers
+                  sortedExtinguishers.forEach(ext => {
+                    items.push({ type: 'ext', ext });
+                  });
+
+                  // Add empty ports (no active extinguisher) as "Vazio"
+                  ports
+                    .filter(p => {
+                      if (p.description?.includes('[INATIVO]')) return false;
+                      // Port is empty if no extinguisher with active status exists there
+                      const hasActive = extinguishers.some(e => e.port === p.number && e.status !== 'Em Revisão' && e.status !== 'Inativo');
+                      return !hasActive;
+                    })
+                    .forEach(p => {
+                      // Don't duplicate if an extinguisher (Em Revisão) already shows this port
+                      const alreadyShown = extinguishers.some(e => e.port === p.number);
+                      if (!alreadyShown) {
+                        items.push({ type: 'empty', port: p });
+                      }
+                    });
+
+                  // Sort all by port number
+                  items.sort((a, b) => {
+                    const aPort = a.type === 'ext' ? (parseInt(a.ext.port) || 0) : (parseInt(a.port.number) || 0);
+                    const bPort = b.type === 'ext' ? (parseInt(b.ext.port) || 0) : (parseInt(b.port.number) || 0);
+                    return aPort - bPort;
+                  });
+
+                  return items.map((item) => {
+                    if (item.type === 'empty') {
+                      const p = item.port;
+                      return (
+                        <div key={`empty-${p.id}`} className="rounded-xl border border-dashed p-3 space-y-1 opacity-60">
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-lg">Posto {p.number}</span>
+                            <PortDescriptionBadge portNumber={p.number} />
+                            <span className="text-muted-foreground text-sm italic">Vazio</span>
+                          </div>
                         </div>
-                        <div className="flex gap-1">
-                          {ext.status !== 'Em Revisão' && (
-                            <Button variant="ghost" size="icon" onClick={() => setReviewId(ext.id)} title="Enviar para revisão">
-                              <RefreshCw className="h-4 w-4 text-status-review" />
+                      );
+                    }
+
+                    const ext = item.ext;
+                    const alerts = getExpiryStatus(ext);
+                    const wDays = daysUntil(ext.warranty_expiry);
+                    const tDays = daysUntil(ext.third_level);
+                    return (
+                      <div key={ext.id} className="rounded-xl border p-3 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-lg">Posto {ext.port || '-'}</span>
+                            <PortDescriptionBadge portNumber={ext.port} />
+                            <span className="text-muted-foreground text-sm">Ext. {ext.code}</span>
+                          </div>
+                          <div className="flex gap-1">
+                            {ext.status !== 'Em Revisão' && (
+                              <Button variant="ghost" size="icon" onClick={() => setReviewId(ext.id)} title="Enviar para revisão">
+                                <RefreshCw className="h-4 w-4 text-status-review" />
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="icon" onClick={() => startEdit(ext)}>
+                              <Pencil className="h-4 w-4" />
                             </Button>
+                            <Button variant="ghost" size="icon" onClick={() => setDeleteId(ext.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="text-xs text-muted-foreground flex flex-wrap gap-3">
+                          <span>{ext.type}</span>
+                          <span>{ext.weight}</span>
+                          {ext.warranty_expiry && (
+                            <span className={wDays !== null && wDays <= 0 ? 'text-status-urgent font-bold' : wDays !== null && wDays <= 30 ? 'text-status-review font-bold' : ''}>
+                              Garantia: {displayWarranty(ext.warranty_expiry)}
+                            </span>
                           )}
-                          <Button variant="ghost" size="icon" onClick={() => startEdit(ext)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => setDeleteId(ext.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          {ext.third_level && (
+                            <span className={tDays !== null && tDays <= 0 ? 'text-status-urgent font-bold' : tDays !== null && tDays <= 30 ? 'text-status-review font-bold' : ''}>
+                              3º Nível: {displayThirdLevel(ext.third_level)}
+                            </span>
+                          )}
                         </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground flex flex-wrap gap-3">
-                        <span>{ext.type}</span>
-                        <span>{ext.weight}</span>
-                        {ext.warranty_expiry && (
-                          <span className={wDays !== null && wDays <= 0 ? 'text-status-urgent font-bold' : wDays !== null && wDays <= 30 ? 'text-status-review font-bold' : ''}>
-                            Garantia: {displayWarranty(ext.warranty_expiry)}
-                          </span>
-                        )}
-                        {ext.third_level && (
-                          <span className={tDays !== null && tDays <= 0 ? 'text-status-urgent font-bold' : tDays !== null && tDays <= 30 ? 'text-status-review font-bold' : ''}>
-                            3º Nível: {displayThirdLevel(ext.third_level)}
-                          </span>
-                        )}
-                      </div>
-                      <div className={`text-xs font-bold ${getStatusColor(ext.status)}`}>
-                        {ext.status}
-                      </div>
-                      {alerts.map((a, i) => (
-                        <div key={i} className={`text-xs font-bold flex items-center gap-1 ${a.level === 'urgent' ? 'text-status-urgent' : 'text-status-review'}`}>
-                          <AlertTriangle className="h-3 w-3" /> {a.type}: {a.days} dias
+                        <div className={`text-xs font-bold ${getStatusColor(ext.status)}`}>
+                          {ext.status}
                         </div>
-                      ))}
-                    </div>
-                  );
-                })}
-                {extinguishers.length === 0 && (
+                        {alerts.map((a, i) => (
+                          <div key={i} className={`text-xs font-bold flex items-center gap-1 ${a.level === 'urgent' ? 'text-status-urgent' : 'text-status-review'}`}>
+                            <AlertTriangle className="h-3 w-3" /> {a.type}: {a.days} dias
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  });
+                })()}
+                {extinguishers.length === 0 && ports.filter(p => !p.description?.includes('[INATIVO]')).length === 0 && (
                   <p className="text-center text-sm text-muted-foreground py-8">Nenhum extintor cadastrado</p>
                 )}
               </div>

@@ -27,7 +27,7 @@ const Login = () => {
         <div className="flex flex-col items-center gap-3">
           <img src="/logo-site.png" alt="inSpek" className="h-16 w-16 object-contain" />
           <h1 className="text-3xl font-black tracking-tight text-foreground">inSpek</h1>
-          <p className="text-sm text-muted-foreground">Gestão de extintores inteligente</p>
+          <p className="text-sm text-muted-foreground">Do digital para o papel impresso</p>
         </div>
 
         <Button
