@@ -16,6 +16,7 @@ interface Member {
   can_inspect: boolean;
   display_name: string | null;
   username: string;
+  email: string | null;
   isOwner?: boolean;
 }
 
@@ -39,6 +40,7 @@ const TeamConfigDialog = ({ open, onOpenChange, teamId, teamName, onTeamDeleted,
   const [memberInput, setMemberInput] = useState('');
   const [addingMember, setAddingMember] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  const [showExportConfirm, setShowExportConfirm] = useState(false);
 
   // Export inspections state
   const now = new Date();
@@ -49,7 +51,6 @@ const TeamConfigDialog = ({ open, onOpenChange, teamId, teamName, onTeamDeleted,
   const fetchMembers = useCallback(async () => {
     setLoading(true);
     try {
-      // Check if current user is owner
       const { data: teamData } = await (supabase.from as any)('teams')
         .select('owner_id')
         .eq('id', teamId)
@@ -61,20 +62,17 @@ const TeamConfigDialog = ({ open, onOpenChange, teamId, teamName, onTeamDeleted,
         .select('id, user_id, can_inspect')
         .eq('team_id', teamId);
 
-      // Collect all user IDs including owner
       const memberUserIds = (tm || []).map((m: any) => m.user_id);
       const allUserIds = ownerId ? [...new Set([ownerId, ...memberUserIds])] : memberUserIds;
 
       if (allUserIds.length === 0) { setMembers([]); return; }
 
       const { data: profiles } = await (supabase.from as any)('profiles')
-        .select('id, username, display_name')
+        .select('id, username, display_name, email')
         .in('id', allUserIds);
 
-      // Build members list: owner first, then team_members
       const result: Member[] = [];
 
-      // Add owner
       if (ownerId) {
         const ownerProfile = profiles?.find((p: any) => p.id === ownerId);
         result.push({
@@ -83,11 +81,11 @@ const TeamConfigDialog = ({ open, onOpenChange, teamId, teamName, onTeamDeleted,
           can_inspect: true,
           display_name: ownerProfile?.display_name || null,
           username: ownerProfile?.username || 'owner',
+          email: ownerProfile?.email || null,
           isOwner: true,
         });
       }
 
-      // Add regular members
       if (tm) {
         for (const m of tm) {
           const p = profiles?.find((p: any) => p.id === m.user_id);
@@ -97,6 +95,7 @@ const TeamConfigDialog = ({ open, onOpenChange, teamId, teamName, onTeamDeleted,
             can_inspect: m.can_inspect ?? true,
             display_name: p?.display_name || null,
             username: p?.username || m.user_id.slice(0, 8),
+            email: p?.email || null,
             isOwner: false,
           });
         }
@@ -182,26 +181,22 @@ const TeamConfigDialog = ({ open, onOpenChange, teamId, teamName, onTeamDeleted,
       const month = parseInt(exportMonth);
       const year = parseInt(exportYear);
 
-      // Fetch personal inspections
       const { data: personalInspections } = await (supabase.from as any)('inspections')
         .select('*')
         .eq('user_id', user.id)
         .is('team_id', null);
 
-      // Filter by month/year
       const filteredInspections = (personalInspections || []).filter((insp: any) => {
         const parts = insp.inspection_date?.split('/');
         if (!parts || parts.length !== 3) return false;
         return parseInt(parts[1]) - 1 === month && parseInt(parts[2]) === year;
       });
 
-      // Fetch personal extinguishers
       const { data: personalExtinguishers } = await (supabase.from as any)('extinguishers')
         .select('*')
         .eq('user_id', user.id)
         .is('team_id', null);
 
-      // Fetch personal ports
       const { data: personalPorts } = await (supabase.from as any)('ports')
         .select('*')
         .eq('user_id', user.id)
@@ -214,7 +209,6 @@ const TeamConfigDialog = ({ open, onOpenChange, teamId, teamName, onTeamDeleted,
 
       let exportedCount = 0;
 
-      // Export extinguishers (avoid duplicates by code)
       if (personalExtinguishers && personalExtinguishers.length > 0) {
         const { data: existingExt } = await (supabase.from as any)('extinguishers')
           .select('code')
@@ -235,7 +229,6 @@ const TeamConfigDialog = ({ open, onOpenChange, teamId, teamName, onTeamDeleted,
         }
       }
 
-      // Export ports (avoid duplicates by number)
       if (personalPorts && personalPorts.length > 0) {
         const { data: existingPorts } = await (supabase.from as any)('ports')
           .select('number')
@@ -256,7 +249,6 @@ const TeamConfigDialog = ({ open, onOpenChange, teamId, teamName, onTeamDeleted,
         }
       }
 
-      // Export inspections
       if (filteredInspections.length > 0) {
         const copies = filteredInspections.map((insp: any) => {
           const { id, created_at, ...rest } = insp;
@@ -268,6 +260,7 @@ const TeamConfigDialog = ({ open, onOpenChange, teamId, teamName, onTeamDeleted,
       }
 
       toast.success(`${exportedCount} registros exportados para a equipe!`);
+      setShowExportConfirm(false);
     } catch (err: any) {
       toast.error('Erro ao exportar: ' + err.message);
     } finally {
@@ -301,19 +294,22 @@ const TeamConfigDialog = ({ open, onOpenChange, teamId, teamName, onTeamDeleted,
               members.map(m => (
                 <div key={m.id} className="rounded-xl border p-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="font-bold text-sm">
                         {m.display_name || m.username}
                         {m.isOwner && <span className="ml-1 text-xs text-muted-foreground">(Dono)</span>}
                         {m.user_id === user?.id && <span className="ml-1 text-xs text-muted-foreground">(Você)</span>}
                       </p>
+                      {m.email && (
+                        <p className="text-xs text-muted-foreground truncate">{m.email}</p>
+                      )}
                       <p className="text-xs text-muted-foreground">@{m.username}</p>
                     </div>
                     {isOwner && !m.isOwner && m.user_id !== user?.id && (
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive"
+                        className="h-8 w-8 text-destructive shrink-0"
                         onClick={() => setRemoveId(m.id)}
                       >
                         <UserX className="h-4 w-4" />
@@ -385,9 +381,9 @@ const TeamConfigDialog = ({ open, onOpenChange, teamId, teamName, onTeamDeleted,
                 </SelectContent>
               </Select>
             </div>
-            <Button variant="outline" className="w-full gap-2 font-bold" onClick={handleExportData} disabled={exporting}>
+            <Button variant="outline" className="w-full gap-2 font-bold" onClick={() => setShowExportConfirm(true)}>
               <Upload className="h-4 w-4" />
-              {exporting ? 'Exportando...' : 'Exportar dados para equipe'}
+              Exportar dados para equipe
             </Button>
           </div>
 
@@ -406,6 +402,17 @@ const TeamConfigDialog = ({ open, onOpenChange, teamId, teamName, onTeamDeleted,
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Export confirm - 5s delay */}
+      <DelayedConfirmDialog
+        open={showExportConfirm}
+        onOpenChange={setShowExportConfirm}
+        title="Exportar dados para equipe?"
+        description={`Seus dados pessoais de ${MONTHS[parseInt(exportMonth)]}/${exportYear} serão copiados para a equipe "${teamName}".`}
+        onConfirm={handleExportData}
+        delaySeconds={5}
+        confirmLabel={exporting ? 'Exportando...' : 'Exportar'}
+      />
 
       {/* Remove member - 5s delay */}
       <DelayedConfirmDialog
