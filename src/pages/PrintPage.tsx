@@ -34,6 +34,7 @@ const PrintPage = () => {
   const warrantyYearFilter = searchParams.get('warrantyYear') || 'all';
   const thirdLevelYearFilter = searchParams.get('thirdLevelYear') || 'all';
   const [inspections, setInspections] = useState<Inspection[]>([]);
+  const [ports, setPorts] = useState<{ number: string; description: string | null }[]>([]);
   const printRef = useRef<HTMLDivElement>(null);
   const [showPromo, setShowPromo] = useState(false);
 
@@ -42,13 +43,17 @@ const PrintPage = () => {
   useEffect(() => {
     const fetch = async () => {
       let query = (supabase.from as any)('inspections').select('*');
+      let portsQuery = supabase.from('ports').select('number, description');
       if (currentTeamId) {
         query = query.eq('team_id', currentTeamId);
+        portsQuery = portsQuery.eq('team_id', currentTeamId);
       } else {
         query = query.is('team_id', null);
+        portsQuery = portsQuery.is('team_id', null);
       }
-      const { data } = await query;
+      const [{ data }, { data: portsData }] = await Promise.all([query, portsQuery]);
       if (data) setInspections(data as Inspection[]);
+      setPorts(portsData || []);
     };
     fetch();
   }, [currentTeamId]);
@@ -142,15 +147,15 @@ const PrintPage = () => {
   };
 
   const thStyle: React.CSSProperties = {
-    border: '2.5px solid #111', padding: '10px 8px', textAlign: 'center',
-    backgroundColor: '#e0e0e0', fontWeight: 900, fontSize: '13px',
+    border: '2.5px solid #111', padding: '10px 4px', textAlign: 'center',
+    backgroundColor: '#e0e0e0', fontWeight: 900, fontSize: '12px',
     verticalAlign: 'middle', lineHeight: '1.2', height: `${HEADER_ROW_HEIGHT}px`,
     color: '#000',
   };
 
   const tdStyle: React.CSSProperties = {
-    border: '2px solid #333', padding: '8px 8px', textAlign: 'center',
-    verticalAlign: 'middle', fontSize: '13px', lineHeight: '1.2', height: `${ROW_HEIGHT}px`,
+    border: '2px solid #333', padding: '8px 4px', textAlign: 'center',
+    verticalAlign: 'middle', fontSize: '12px', lineHeight: '1.2', height: `${ROW_HEIGHT}px`,
     fontWeight: 700, color: '#000',
   };
 
@@ -159,6 +164,7 @@ const PrintPage = () => {
       <tr>
         <th style={thStyle}>Código</th>
         <th style={thStyle}>Posto</th>
+        <th style={thStyle}>Descrição<br />(nome do posto)</th>
         <th style={thStyle}>Data</th>
         <th style={thStyle}>Manômetro</th>
         <th style={thStyle}>Lacre</th>
@@ -176,6 +182,7 @@ const PrintPage = () => {
         <tr key={insp.id}>
           <td style={{ ...tdStyle, fontWeight: 'bold' }}>{insp.code}</td>
           <td style={tdStyle}>{insp.port}</td>
+          <td style={{ ...tdStyle, overflowWrap: 'anywhere' }}>{ports.find(p => p.number === insp.port)?.description?.trim() || '-'}</td>
           <td style={tdStyle}>{insp.inspection_date}</td>
           <td style={{ ...tdStyle, fontSize: '14px' }}>{getStatusSymbol(insp.manometer_status)}</td>
           <td style={{ ...tdStyle, fontSize: '14px' }}>{getStatusSymbol(insp.seal_status)}</td>
