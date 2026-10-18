@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Upload, Download, FileSpreadsheet, Trash2, Clock, AlertTriangle, Check, Phone } from 'lucide-react';
+import { ArrowLeft, Upload, Download, FileSpreadsheet, Trash2, Check, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 
@@ -27,7 +27,6 @@ interface Spreadsheet {
   id: string;
   file_name: string;
   created_at: string;
-  expires_at: string;
 }
 
 const EmergencyContacts = () => {
@@ -54,11 +53,9 @@ const EmergencyContacts = () => {
 
     const { data } = await query;
     if (data) {
-      // Filter out expired
-      const now = new Date();
-      const valid = (data as Spreadsheet[]).filter(s => new Date(s.expires_at) > now);
-      setSpreadsheets(valid);
-      if (activeSpreadsheet && !valid.find(s => s.id === activeSpreadsheet.id)) {
+      const savedSpreadsheets = data as Spreadsheet[];
+      setSpreadsheets(savedSpreadsheets);
+      if (activeSpreadsheet && !savedSpreadsheets.find(s => s.id === activeSpreadsheet.id)) {
         setActiveSpreadsheet(null);
         setContacts([]);
       }
@@ -79,11 +76,6 @@ const EmergencyContacts = () => {
   useEffect(() => {
     if (activeSpreadsheet) fetchContacts(activeSpreadsheet.id);
   }, [activeSpreadsheet, fetchContacts]);
-
-  const getDaysLeft = (expiresAt: string) => {
-    const diff = new Date(expiresAt).getTime() - Date.now();
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -244,17 +236,6 @@ const EmergencyContacts = () => {
         {!activeSpreadsheet && (
           <div className="space-y-4">
             <div className="rounded-2xl border bg-card p-5 space-y-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-accent shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-bold text-foreground">Aviso importante</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Os dados importados serão automaticamente deletados após <strong>7 dias</strong> (no 7º dia às 23:59). 
-                    Certifique-se de baixar o arquivo antes do vencimento.
-                  </p>
-                </div>
-              </div>
-
               <div className="rounded-xl border border-dashed border-muted-foreground/30 p-6 text-center space-y-3">
                 <Upload className="h-8 w-8 mx-auto text-muted-foreground/50" />
                 <div>
@@ -289,12 +270,6 @@ const EmergencyContacts = () => {
                     <FileSpreadsheet className="h-5 w-5 text-foreground shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground truncate">{s.file_name}</p>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <Clock className="h-3 w-3 text-muted-foreground" />
-                        <p className="text-xs text-muted-foreground">
-                          Expira em {getDaysLeft(s.expires_at)} dia(s)
-                        </p>
-                      </div>
                     </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDeleteSpreadsheet(s.id); }}
@@ -321,7 +296,7 @@ const EmergencyContacts = () => {
                 <div>
                   <p className="text-sm font-bold text-foreground">{activeSpreadsheet.file_name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {inspectedCount}/{totalCount} inspecionados • Expira em {getDaysLeft(activeSpreadsheet.expires_at)}d
+                    {inspectedCount}/{totalCount} inspecionados
                   </p>
                 </div>
               </div>
