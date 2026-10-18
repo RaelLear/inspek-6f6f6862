@@ -230,7 +230,7 @@ const PrintPage = () => {
       </div>
       {showWatermark && (
         <div style={{ fontSize: '9px', color: '#999', textAlign: 'left', marginBottom: '4px' }}>
-          Feito com: inspek.lovable.app
+          Feito com: inspek.vercel.app
         </div>
       )}
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', margin: '8px 0 18px', color: '#000', fontWeight: 700 }}>
